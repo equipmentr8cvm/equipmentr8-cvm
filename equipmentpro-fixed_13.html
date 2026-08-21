@@ -1,0 +1,2191 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>equipment</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Sarabun:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--ig-white:#ffffff;--ig-bg:#fafafa;--ig-border:#dbdbdb;--ig-text:#262626;--ig-muted:#8e8e8e;--ig-blue:#0095f6;--ig-red:#ed4956;--ig-green:#58c322;--ig-orange:#fd9400;--ig-gradient:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);--ig-gradient-btn:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);--radius:12px;--radius-sm:8px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Kanit','Sarabun',sans-serif;background:#fafafa;color:var(--ig-text);min-height:100vh;}
+.topbar{position:sticky;top:0;z-index:100;background:var(--ig-white);border-bottom:1px solid var(--ig-border);display:flex;align-items:center;justify-content:space-between;padding:10px 20px}
+.topbar-logo{font-size:22px;font-weight:600;background:var(--ig-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.5px}
+.topbar-icons{display:flex;gap:10px;align-items:center}
+.icon-btn{background:none;border:none;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background .2s;color:var(--ig-text);position:relative}
+.icon-btn:hover{background:var(--ig-bg)}
+.alert-badge{background:var(--ig-red);color:#fff;font-size:10px;font-weight:600;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;position:absolute;top:-2px;right:-2px}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;margin-right:4px;transition:background .4s}
+.conn-dot.on{background:var(--ig-green)}
+.conn-label{font-size:11px;color:var(--ig-muted)}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--ig-white);border-top:1px solid var(--ig-border);display:flex;justify-content:space-around;align-items:flex-end;padding:8px 0 max(8px,env(safe-area-inset-bottom))}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 8px;transition:all .2s;color:var(--ig-muted);font-size:10px;font-weight:400;white-space:nowrap;background:none;border:none;flex:1}
+.nav-item.active{color:var(--ig-blue);font-weight:600;transform:translateY(-2px)}
+.nav-item.active svg{stroke:var(--ig-blue);filter:drop-shadow(0 0 5px rgba(0,149,246,.4))}
+.nav-item svg{width:22px;height:22px;transition:all .2s}
+.nav-item .nav-dot{width:4px;height:4px;border-radius:50%;background:transparent;transition:background .2s}
+.nav-item.active .nav-dot{background:var(--ig-blue)}
+.nav-item-issue{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:all .2s;white-space:nowrap;background:none;border:none;flex:1;position:relative;top:-14px}
+.nav-item-issue .nav-issue-circle{width:54px;height:54px;border-radius:50%;background:var(--ig-gradient-btn);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(131,58,180,.45);transition:all .2s}
+.nav-item-issue:active .nav-issue-circle,.nav-item-issue.active .nav-issue-circle{transform:scale(0.93);box-shadow:0 2px 8px rgba(131,58,180,.35)}
+.nav-item-issue svg{width:26px;height:26px;color:#fff}
+.nav-item-issue .nav-issue-label{font-size:10px;font-weight:600;color:var(--ig-text);margin-top:2px}
+.nav-item-issue.active .nav-issue-label{background:var(--ig-gradient-btn);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.main-content{max-width:640px;margin:0 auto;padding:16px 16px 90px}
+
+
+
+
+
+
+
+.page{display:none}.page.active{display:block}
+.card{background:var(--ig-white);border:1px solid var(--ig-border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px}
+.card-header{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ig-border)}
+.card-title{font-size:14px;font-weight:600}
+.card-body{padding:16px}
+.product-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-bottom:16px}
+.skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.product-tile{aspect-ratio:1;position:relative;cursor:pointer;background:#f0f0f0;overflow:hidden}
+.product-tile img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.product-tile:hover img{transform:scale(1.05)}
+.tile-overlay{position:absolute;inset:0;background:rgba(0,0,0,.32);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;color:#fff;font-size:12px;text-align:center;padding:8px}
+.product-tile:hover .tile-overlay,.product-tile:active .tile-overlay{opacity:1}
+.tile-low{position:absolute;top:5px;right:5px;background:var(--ig-red);color:#fff;font-size:9px;font-weight:600;padding:2px 5px;border-radius:10px}
+.tile-name{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-size:10px;padding:14px 6px 6px}
+.product-no-img{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#e8e8e8,#f5f5f5);color:var(--ig-muted);font-size:10px;text-align:center;padding:8px}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:13px;font-weight:500;color:var(--ig-text);margin-bottom:6px}
+.form-control{width:100%;padding:10px 14px;border:1.5px solid var(--ig-border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;color:var(--ig-text);background:var(--ig-white);outline:none;transition:border-color .2s}
+.form-control:focus{border-color:var(--ig-blue)}
+.form-control::placeholder{color:var(--ig-muted)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{padding:10px 18px;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--ig-blue);color:#fff}.btn-primary:hover{background:#1877f2}
+.btn-gradient{background:var(--ig-gradient-btn);color:#fff}.btn-gradient:hover{opacity:.9}
+.btn-outline{background:transparent;color:var(--ig-blue);border:1.5px solid var(--ig-blue)}.btn-outline:hover{background:#e8f4fd}
+.btn-danger{background:transparent;color:var(--ig-red);border:1.5px solid var(--ig-red)}.btn-danger:hover{background:#ffeef0}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-block{width:100%;justify-content:center}
+.btn-icon{background:var(--ig-bg);border:1px solid var(--ig-border);border-radius:var(--radius-sm);padding:7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .2s;color:var(--ig-text)}
+.btn-icon:hover{background:var(--ig-border)}
+.story-row{display:flex;gap:14px;overflow-x:auto;padding:12px 0 8px;-ms-overflow-style:none;scrollbar-width:none}
+.story-row::-webkit-scrollbar{display:none}
+.story-item{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex-shrink:0}
+.story-ring{width:60px;height:60px;border-radius:50%;padding:2.5px;background:var(--ig-gradient);display:flex;align-items:center;justify-content:center}
+.story-ring-inner{width:100%;height:100%;border-radius:50%;background:var(--ig-white);display:flex;align-items:center;justify-content:center;padding:3px;overflow:hidden}
+.story-ring-inner img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.story-icon{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#e8e8e8,#f5f5f5);display:flex;align-items:center;justify-content:center;font-size:20px}
+.story-label{font-size:10px;color:var(--ig-text);text-align:center;max-width:60px;line-height:1.3}
+.story-count{font-size:10px;color:var(--ig-muted)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--ig-border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.stat-cell{background:var(--ig-white);padding:14px 8px;text-align:center}
+.stat-num{font-size:20px;font-weight:600}
+.stat-label{font-size:11px;color:var(--ig-muted);margin-top:2px}
+.tx-item{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--ig-border);cursor:pointer;transition:background .15s}
+.tx-item:hover{background:var(--ig-bg)}.tx-item:last-child{border-bottom:none}
+.tx-avatar{width:42px;height:42px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#e8e8e8,#f5f5f5);display:flex;align-items:center;justify-content:center;font-size:18px}
+.tx-avatar img{width:100%;height:100%;object-fit:cover}
+.tx-info{flex:1;min-width:0}
+.tx-name{font-size:13px;font-weight:500}
+.tx-sub{font-size:11px;color:var(--ig-muted);margin-top:2px;line-height:1.4}
+.tx-actions{display:flex;gap:6px;margin-top:6px}
+.tx-amount{text-align:right;flex-shrink:0}
+.tx-qty{font-size:15px;font-weight:600}.tx-qty.out{color:var(--ig-red)}.tx-qty.in{color:var(--ig-green)}
+.tx-date{font-size:11px;color:var(--ig-muted);margin-top:2px}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-danger{background:#ffeef0;color:var(--ig-red)}
+.badge-success{background:#eafaf0;color:var(--ig-green)}
+.badge-warning{background:#fff8e6;color:var(--ig-orange)}
+.badge-info{background:#e8f4fd;color:var(--ig-blue)}
+.modal-overlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.modal-overlay.hidden{display:none}
+.modal-sheet{background:var(--ig-white);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;padding:0 0 30px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--ig-border);border-radius:2px;margin:10px auto 0}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ig-border);position:sticky;top:0;background:white;z-index:1}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;cursor:pointer;font-size:22px;color:var(--ig-muted);line-height:1}
+.modal-body{padding:16px}
+.img-upload-area{border:2px dashed var(--ig-border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--ig-bg)}
+.img-upload-area:hover{border-color:var(--ig-blue)}
+.img-upload-area img{max-width:100%;max-height:200px;border-radius:var(--radius-sm);margin-top:10px}
+.detail-table{width:100%;border-collapse:collapse;font-size:13px}
+.detail-table td{padding:10px 12px;border-bottom:1px solid var(--ig-border);vertical-align:middle}
+.detail-table tr:last-child td{border-bottom:none}
+.chart-container{position:relative;height:200px;margin:8px 0}
+.filter-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-ms-overflow-style:none;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-chip{flex-shrink:0;padding:6px 14px;border:1.5px solid var(--ig-border);border-radius:20px;font-family:inherit;font-size:13px;background:var(--ig-white);color:var(--ig-text);cursor:pointer;transition:all .2s}
+.filter-chip.active{background:var(--ig-text);color:var(--ig-white);border-color:var(--ig-text)}
+.product-card{display:flex;gap:14px;align-items:center;padding:12px;background:var(--ig-white);border:1px solid var(--ig-border);border-radius:var(--radius);margin-bottom:10px;cursor:pointer;transition:all .2s}
+.product-card:hover,.product-card.selected{border-color:var(--ig-blue);background:#f0f8ff}
+.product-card-img{width:56px;height:56px;border-radius:var(--radius-sm);flex-shrink:0;background:var(--ig-bg);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.product-card-img img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm)}
+.product-card-info{flex:1;min-width:0}
+.product-card-name{font-size:14px;font-weight:500}
+.product-card-code{font-size:11px;color:var(--ig-muted);margin-top:2px}
+.checkout-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--ig-border)}
+.checkout-item:last-child{border-bottom:none}
+.checkout-item-name{flex:1;font-size:14px}
+.checkout-item-qty{display:flex;align-items:center;gap:6px}
+.qty-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ig-border);background:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;color:var(--ig-text)}
+.qty-btn:hover{border-color:var(--ig-blue);color:var(--ig-blue)}
+.qty-num{font-size:14px;font-weight:500;min-width:22px;text-align:center}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-size:16px;font-weight:600}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast-container{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;width:90%;max-width:360px;pointer-events:none}
+.toast{background:rgba(0,0,0,.85);color:#fff;padding:12px 16px;border-radius:var(--radius);font-size:14px;text-align:center;animation:fadeIn .3s ease}
+.toast.success{background:rgba(88,195,34,.92)}.toast.error{background:rgba(237,73,86,.92)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.doc-number-display{background:linear-gradient(135deg,#f8f9fa,#e8e8e8);border:1px solid var(--ig-border);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--ig-muted);letter-spacing:.5px;margin-bottom:14px}
+.doc-number-display span{font-weight:600;color:var(--ig-blue);font-size:15px}
+.empty-state{text-align:center;padding:36px 20px;color:var(--ig-muted)}
+.empty-icon{font-size:44px;margin-bottom:10px}
+.empty-text{font-size:15px;font-weight:500;color:var(--ig-text);margin-bottom:5px}
+.empty-sub{font-size:13px}
+.month-nav{display:flex;align-items:center;justify-content:space-between;background:var(--ig-white);border:1px solid var(--ig-border);border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:12px}
+.month-nav-btn{background:none;border:none;cursor:pointer;font-size:20px;color:var(--ig-muted);padding:4px}
+.month-nav-label{font-size:15px;font-weight:500}
+.progress-bar{background:#f0f0f0;border-radius:4px;height:6px;overflow:hidden;margin:6px 0 4px}
+.progress-fill{height:100%;border-radius:4px;transition:width .5s}
+.stock-card{display:flex;gap:12px;align-items:center;padding:14px 16px;background:var(--ig-white);border:1px solid var(--ig-border);border-radius:var(--radius);margin-bottom:10px}
+.stock-card-img{width:52px;height:52px;border-radius:var(--radius-sm);background:var(--ig-bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.stock-card-img img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm)}
+#qr-video{width:100%;border-radius:var(--radius);max-height:260px;object-fit:cover}
+.qr-overlay{position:relative}
+.qr-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:160px;height:160px;border:3px solid var(--ig-blue);border-radius:16px;pointer-events:none}
+.config-note{background:#f0f8ff;border-radius:var(--radius-sm);border:1px solid #bee3f8;padding:12px 14px;font-size:12px;color:#0c5460;line-height:1.7;margin-top:14px}
+.warehouse-screen{position:fixed;inset:0;z-index:9999;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px}
+.warehouse-screen.hidden{display:none}
+.warehouse-logo{font-size:28px;font-weight:700;background:var(--ig-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+.warehouse-subtitle{font-size:14px;color:var(--ig-muted);margin-bottom:36px}
+.warehouse-cards{display:flex;flex-direction:column;gap:14px;width:100%;max-width:340px}
+.warehouse-card{border:2px solid var(--ig-border);border-radius:16px;padding:20px 24px;cursor:pointer;transition:all .2s;background:var(--ig-white);display:flex;align-items:center;gap:16px;-webkit-tap-highlight-color:rgba(0,0,0,0.1)}
+.warehouse-card *{pointer-events:none}
+.warehouse-card:hover{border-color:var(--ig-blue);box-shadow:0 4px 20px rgba(0,149,246,.15);transform:translateY(-2px)}
+.warehouse-card-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.warehouse-card-info{flex:1}
+.warehouse-card-name{font-size:18px;font-weight:700}
+.warehouse-card-desc{font-size:12px;color:var(--ig-muted);margin-top:2px}
+.warehouse-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-left:8px}
+.dept-tag{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<!-- Warehouse Selector -->
+<!-- Login Screen -->
+<div class="warehouse-screen" id="login-screen">
+  <div class="warehouse-logo">equipment</div>
+  <div class="warehouse-subtitle">ระบบจัดการวัสดุอุปกรณ์สำนักงาน</div>
+  <div style="width:100%;max-width:340px">
+    <div class="form-group" style="margin-bottom:12px">
+      <input type="text" class="form-control" id="login-user" placeholder="ชื่อผู้ใช้" autocomplete="username" style="font-size:15px" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="form-group" style="margin-bottom:16px;position:relative">
+      <input type="password" class="form-control" id="login-pass" placeholder="รหัสผ่าน" autocomplete="current-password" style="font-size:15px;padding-right:44px" onkeydown="if(event.key==='Enter')doLogin()">
+      <button type="button" onclick="togglePass()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ig-muted);z-index:2">
+        <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <div id="login-error" style="color:#dc2626;font-size:13px;text-align:center;margin-bottom:10px;display:none"></div>
+    <button type="button" id="login-btn" style="width:100%;padding:14px;font-size:15px;font-family:inherit;font-weight:600;background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border:none;border-radius:12px;cursor:pointer;position:relative;z-index:1" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- Warehouse Selector (dynamic) -->
+<div class="warehouse-screen hidden" id="warehouse-screen">
+  <div style="position:absolute;top:20px;right:20px;display:flex;gap:8px;z-index:1">
+    <button id="wh-admin-corner-btn" onclick="openAdmin('users')" style="display:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;align-items:center;gap:6px">
+      &#x2699;&#xfe0f; เพิ่ม/จัดการผู้ใช้
+    </button>
+    <button onclick="doLogout()" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+      &#x1f6aa; ออกจากระบบ
+    </button>
+  </div>
+  <div class="warehouse-logo">equipment</div>
+  <div class="warehouse-subtitle" id="wh-screen-subtitle">เลือกคลังที่ต้องการ</div>
+  <div class="warehouse-cards" id="wh-cards-container" style="max-height:70vh;overflow-y:auto;width:100%;max-width:400px"></div>
+</div>
+
+<!-- Admin Modal -->
+<div class="modal-overlay hidden" id="modal-admin">
+  <div class="modal-sheet" style="max-height:92vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><span class="modal-title">&#x2699;&#xfe0f; จัดการระบบ</span><button class="modal-close" onclick="closeModal('modal-admin')">&#xd7;</button></div>
+    <div class="modal-body">
+      <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto">
+        <button class="filter-chip active" id="admin-tab-warehouses" onclick="switchAdminTab('warehouses',this)">&#x1f3ed; คลัง</button>
+        <button class="filter-chip" id="admin-tab-users" onclick="switchAdminTab('users',this)">&#x1f464; ผู้ใช้</button>
+      </div>
+      <div id="admin-panel-warehouses">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <select class="form-control" id="new-wh-company" style="flex:1;min-width:120px">
+            <option value="pom">POM</option>
+            <option value="num">NUM</option>
+            <option value="cvm">CVM</option>
+          </select>
+          <input type="text" class="form-control" id="new-wh-code" placeholder="รหัสคลัง" style="flex:1;min-width:100px">
+          <input type="text" class="form-control" id="new-wh-name" placeholder="ชื่อคลัง" style="flex:2;min-width:140px">
+          <button class="btn btn-gradient btn-sm" onclick="addWarehouse()">+ เพิ่ม</button>
+        </div>
+        <div id="warehouses-list"></div>
+      </div>
+      <div id="admin-panel-users" style="display:none">
+        <div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:12px">
+          <div class="form-row" style="margin-bottom:8px">
+            <input type="text" class="form-control" id="new-user-username" placeholder="ชื่อผู้ใช้">
+            <input type="text" class="form-control" id="new-user-display" placeholder="ชื่อแสดง">
+          </div>
+          <div class="form-row" style="margin-bottom:8px">
+            <input type="password" class="form-control" id="new-user-pass" placeholder="รหัสผ่าน">
+            <select class="form-control" id="new-user-role">
+              <option value="user">User</option>
+              <option value="superuser">SuperUser</option>
+            </select>
+          </div>
+          <label class="form-label">สิทธิ์คลัง (เลือกตามบริษัท)</label>
+          <div id="new-user-wh-list" style="margin-top:6px;width:100%"></div>
+          <button class="btn btn-gradient btn-block" style="margin-top:10px" onclick="addUser()">+ เพิ่มผู้ใช้</button>
+        </div>
+        <div style="position:relative;margin-bottom:10px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ig-muted);pointer-events:none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="form-control" id="user-search" placeholder="ค้นหาผู้ใช้..." style="padding-left:34px;font-size:13px" oninput="filterUsers()">
+        </div>
+        <div id="users-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<header class="topbar">
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="topbar-logo">equipment</div>
+    <span id="topbar-dept-badge" style="display:none;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700"></span>
+  </div>
+  <div class="topbar-icons">
+    <span class="conn-label"><span class="conn-dot" id="conn-dot"></span><span id="conn-text">ออฟไลน์</span></span>
+    <button class="icon-btn" onclick="showLowStockAlert()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="alert-badge" id="alert-badge" style="display:none">!</span>
+    </button>
+    <button class="btn btn-outline btn-sm" id="btn-switch-wh" onclick="switchWarehouse()" style="font-size:12px;padding:5px 12px;display:none">เปลี่ยนคลัง</button>
+    <button class="btn btn-sm" id="btn-admin" onclick="openAdmin()" style="font-size:12px;padding:5px 12px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;display:none">&#x2699;&#xfe0f; เพิ่ม/จัดการผู้ใช้</button>
+    <button class="btn btn-sm" onclick="doLogout()" style="font-size:12px;padding:5px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px">ออกจากระบบ</button>
+  </div>
+</header>
+
+<main class="main-content">
+  <!-- PAGE: Equipment -->
+  <div class="page active" id="page-equipment">
+    <div class="story-row" id="category-stories"></div>
+    <div class="stats-row">
+      <div class="stat-cell"><div class="stat-num" id="stat-total">0</div><div class="stat-label">รายการทั้งหมด</div></div>
+      <div class="stat-cell"><div class="stat-num" id="stat-empty" style="color:#b91c1c">0</div><div class="stat-label">หมด</div></div>
+      <div class="stat-cell"><div class="stat-num" id="stat-low" style="color:#facc15">0</div><div class="stat-label">ใกล้หมด</div></div>
+      <div class="stat-cell"><div class="stat-num" id="stat-ok" style="color:var(--ig-green)">0</div><div class="stat-label">ปกติ</div></div>
+    </div>
+    <div class="section-header">
+      <span class="section-title">อุปกรณ์สำนักงาน</span>
+      <button class="btn btn-gradient btn-sm" onclick="openAddEquip()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>เพิ่มอุปกรณ์
+      </button>
+    </div>
+    <div style="position:relative;margin-bottom:14px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ig-muted);pointer-events:none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="equip-search" class="form-control" placeholder="ค้นหาอุปกรณ์ รหัส หรือชื่อ..." style="padding-left:38px" oninput="renderEquip()">
+    </div>
+    <div class="product-grid" id="product-grid"></div>
+    <div class="empty-state" id="equipment-empty" style="display:none">
+      <div class="empty-icon">📦</div><div class="empty-text">ยังไม่มีอุปกรณ์สำนักงาน</div>
+      <div class="empty-sub">กดปุ่ม "เพิ่มอุปกรณ์" เพื่อเริ่มต้น</div>
+    </div>
+  </div>
+
+  <!-- PAGE: Issue -->
+  <div class="page" id="page-issue">
+    <div class="section-header">
+      <span class="section-title">เบิก-จ่าย</span>
+      <button class="btn btn-gradient btn-sm" onclick="openCreateIssue()">+ สร้างรายการ</button>
+    </div>
+    <div id="issue-list-wrap"></div>
+  </div>
+
+  <!-- PAGE: Receive -->
+  <div class="page" id="page-receive">
+    <div class="section-header">
+      <span class="section-title">รับเข้า</span>
+      <button class="btn btn-gradient btn-sm" onclick="openCreateReceive()">+ สร้างรายการ</button>
+    </div>
+    <div id="receive-list-wrap"></div>
+  </div>
+
+  <!-- PAGE: Stock -->
+  <div class="page" id="page-stock">
+    <div class="section-header">
+      <span class="section-title">สต๊อกคงเหลือ</span>
+      <button class="btn btn-outline btn-sm" onclick="exportStock()" style="gap:6px;color:#217346;border-color:#217346">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>ดาวน์โหลด Excel
+      </button>
+    </div>
+    <div class="filter-row">
+      <button class="filter-chip active" onclick="filterStock('all',this)">ทั้งหมด</button>
+      <button class="filter-chip" onclick="filterStock('desc',this)">มาก → น้อย</button>
+      <button class="filter-chip" onclick="filterStock('asc',this)">น้อย → มาก</button>
+      <button class="filter-chip" onclick="filterStock('low',this)">⚠️ ใกล้หมด</button>
+      <button class="filter-chip" onclick="filterStock('empty',this)" style="color:#b91c1c;border-color:#fca5a5">🚫 หมด</button>
+    </div>
+    <div style="position:relative;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ig-muted)" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="stock-search" class="form-control" placeholder="ค้นหาชื่อหรือรหัสอุปกรณ์..." style="padding-left:36px" oninput="renderStockList()">
+    </div>
+    <div id="stock-list"></div>
+  </div>
+
+  <!-- PAGE: Issue Report -->
+  <div class="page" id="page-issue-report">
+    <div class="section-header">
+      <span class="section-title">รายงานเบิก-จ่าย</span>
+      <button class="btn btn-outline btn-sm" onclick="exportIssueReport()" style="gap:6px;color:#217346;border-color:#217346">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>ดาวน์โหลด Excel
+      </button>
+    </div>
+    <div class="month-nav">
+      <button class="month-nav-btn" onclick="changeMonth('issue',-1)">‹</button>
+      <span class="month-nav-label" id="issue-report-month"></span>
+      <button class="month-nav-btn" onclick="changeMonth('issue',1)">›</button>
+    </div>
+    <div class="stats-row" style="margin-bottom:12px">
+      <div class="stat-cell"><div class="stat-num" id="ir-times">0</div><div class="stat-label">ครั้ง</div></div>
+      <div class="stat-cell"><div class="stat-num" id="ir-items">0</div><div class="stat-label">รายการ</div></div>
+      <div class="stat-cell"><div class="stat-num" id="ir-units">0</div><div class="stat-label">ชิ้น</div></div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">แนวโน้มรายวัน</span></div><div class="card-body"><div class="chart-container"><canvas id="issue-chart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><span class="card-title">รายการเบิก</span></div><div id="issue-report-list" style="padding:0"></div></div>
+  </div>
+
+  <!-- PAGE: Receive Report -->
+  <div class="page" id="page-receive-report">
+    <div class="section-header">
+      <span class="section-title">รายงานรับเข้า</span>
+      <button class="btn btn-outline btn-sm" onclick="exportReceiveReport()" style="gap:6px;color:#217346;border-color:#217346">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>ดาวน์โหลด Excel
+      </button>
+    </div>
+    <div class="month-nav">
+      <button class="month-nav-btn" onclick="changeMonth('receive',-1)">‹</button>
+      <span class="month-nav-label" id="receive-report-month"></span>
+      <button class="month-nav-btn" onclick="changeMonth('receive',1)">›</button>
+    </div>
+    <div class="stats-row" style="margin-bottom:12px">
+      <div class="stat-cell"><div class="stat-num" id="rr-times">0</div><div class="stat-label">ครั้ง</div></div>
+      <div class="stat-cell"><div class="stat-num" id="rr-items">0</div><div class="stat-label">รายการ</div></div>
+      <div class="stat-cell"><div class="stat-num" id="rr-units">0</div><div class="stat-label">ชิ้น</div></div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">แนวโน้มรายวัน</span></div><div class="card-body"><div class="chart-container"><canvas id="receive-chart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><span class="card-title">รายการรับเข้า</span></div><div id="receive-report-list" style="padding:0"></div></div>
+  <div class="page" id="page-equip-report">
+    <div class="section-header">
+      <span class="section-title">รายงานอุปกรณ์สำนักงาน</span>
+      <button class="btn btn-outline btn-sm" onclick="exportEquipReport()" style="gap:6px;color:#217346;border-color:#217346">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>ดาวน์โหลด Excel
+      </button>
+    </div>
+    <div style="position:relative;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ig-muted);pointer-events:none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="equip-report-search" class="form-control" placeholder="ค้นหารหัส หรือชื่ออุปกรณ์..." style="padding-left:38px" oninput="renderEquipReport()">
+    </div>
+    <div class="stats-row" style="margin-bottom:12px">
+      <div class="stat-cell"><div class="stat-num" id="er-total">0</div><div class="stat-label">ทั้งหมด</div></div>
+      <div class="stat-cell"><div class="stat-num" id="er-empty" style="color:#b91c1c">0</div><div class="stat-label">หมด</div></div>
+      <div class="stat-cell"><div class="stat-num" id="er-low" style="color:#facc15">0</div><div class="stat-label">ใกล้หมด</div></div>
+      <div class="stat-cell"><div class="stat-num" id="er-ok" style="color:var(--ig-green)">0</div><div class="stat-label">ปกติ</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--ig-bg);border-bottom:1px solid var(--ig-border)">
+            <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--ig-muted)">รหัส</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--ig-muted)">ชื่ออุปกรณ์</th>
+            <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--ig-muted)">หน่วย</th>
+            <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--ig-muted)">คงเหลือ</th>
+            <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--ig-muted)">ขั้นต่ำ</th>
+            <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--ig-muted)">สถานะ</th>
+          </tr>
+        </thead>
+        <tbody id="equip-report-body"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="navigate('equipment',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>หน้าหลัก<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" onclick="navigate('receive',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>รับเข้า<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item-issue" id="nav-issue-btn" onclick="navigateIssue(this)">
+    <div class="nav-issue-circle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+    </div>
+    <span class="nav-issue-label">เบิก-จ่าย</span>
+  </button>
+  <button class="nav-item" onclick="navigate('stock',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>สต๊อก<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" id="nav-report-btn" onclick="openReportTab(this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>รายงาน<div class="nav-dot"></div>
+  </button>
+</nav>
+
+<!-- Add/Edit Equipment -->
+<div class="modal-overlay hidden" id="modal-add-equipment">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modal-equip-title">เพิ่มอุปกรณ์สำนักงาน</span>
+      <button class="modal-close" onclick="closeModal('modal-add-equipment')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="equip-edit-id">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">รหัสอุปกรณ์ *</label><input type="text" class="form-control" id="equip-code" placeholder="EQ001"></div>
+        <div class="form-group"><label class="form-label">ชื่ออุปกรณ์ *</label><input type="text" class="form-control" id="equip-name" placeholder="กระดาษ A4"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">รูปภาพ</label>
+        <div class="img-upload-area" onclick="document.getElementById('equip-img-input').click()">
+          <div id="equip-img-preview">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" style="margin:0 auto;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p style="font-size:13px;color:#bbb;margin-top:8px">แตะเพื่อเลือกรูป</p>
+          </div>
+        </div>
+        <input type="file" id="equip-img-input" accept="image/*" style="display:none" onchange="previewEquipImg(this)">
+        <input type="text" class="form-control" id="equip-img-url" placeholder="หรือวาง URL รูปภาพ" style="margin-top:8px" oninput="previewEquipImgUrl(this.value)">
+        <input type="hidden" id="equip-img-data">
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">หน่วยนับ *</label><input type="text" class="form-control" id="equip-unit" placeholder="ชิ้น, รีม, กล่อง"></div>
+        <div class="form-group"><label class="form-label">จำนวนเตือนขั้นต่ำ</label><input type="number" class="form-control" id="equip-min-qty" value="5" min="0"></div>
+      </div>
+      <button class="btn btn-gradient btn-block" onclick="saveEquipment()" id="save-equip-btn">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Issue -->
+<div class="modal-overlay hidden" id="modal-create-issue">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modal-issue-title">สร้างรายการเบิก</span>
+      <button class="modal-close" onclick="closeModal('modal-create-issue')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="issue-edit-id">
+      <div class="doc-number-display">เลขที่: <span id="issue-doc-num">-</span></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">วันที่เบิก</label><input type="date" class="form-control" id="issue-date"></div>
+        <div class="form-group"><label class="form-label">ชื่อผู้เบิก *</label><input type="text" class="form-control" id="issue-requester" placeholder="ชื่อ-นามสกุล"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">หน่วยงาน *</label><input type="text" class="form-control" id="issue-dept" placeholder="แผนก / ฝ่าย"></div>
+        <div class="form-group"><label class="form-label">หมายเหตุ</label><input type="text" class="form-control" id="issue-note" placeholder="(ถ้ามี)"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:14px;font-weight:600">รายการอุปกรณ์</span>
+        <button class="btn btn-outline btn-sm" onclick="openProductPicker('issue')">+ เลือกอุปกรณ์</button>
+      </div>
+      <div id="issue-items-list"><div class="empty-state" style="padding:20px"><div class="empty-sub">กดเลือกอุปกรณ์</div></div></div>
+      <button class="btn btn-gradient btn-block" onclick="submitIssue()" id="submit-issue-btn" style="margin-top:14px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>บันทึกการเบิก
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Receive -->
+<div class="modal-overlay hidden" id="modal-create-receive">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modal-receive-title">สร้างรายการรับเข้า</span>
+      <button class="modal-close" onclick="closeModal('modal-create-receive')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="receive-edit-id">
+      <div class="doc-number-display">เลขที่: <span id="receive-doc-num">-</span></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">วันที่รับเข้า</label><input type="date" class="form-control" id="receive-date"></div>
+        <div class="form-group"><label class="form-label">หมายเหตุ</label><input type="text" class="form-control" id="receive-note" placeholder="(ถ้ามี)"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:14px;font-weight:600">รายการอุปกรณ์</span>
+        <button class="btn btn-outline btn-sm" onclick="openProductPicker('receive')">+ เลือกอุปกรณ์</button>
+      </div>
+      <div id="receive-items-list"><div class="empty-state" style="padding:20px"><div class="empty-sub">กดเลือกอุปกรณ์</div></div></div>
+      <button class="btn btn-gradient btn-block" onclick="submitReceive()" id="submit-receive-btn" style="margin-top:14px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>บันทึกการรับเข้า
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Picker -->
+<div class="modal-overlay hidden" id="modal-product-picker">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">เลือกอุปกรณ์สำนักงาน</span>
+      <button class="modal-close" onclick="closeModal('modal-product-picker')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="form-control" id="picker-search" placeholder="ค้นหาอุปกรณ์..." oninput="filterPicker(this.value)" style="margin-bottom:12px">
+      <div id="picker-list"></div>
+      <button class="btn btn-gradient btn-block" onclick="confirmPicker()" style="margin-top:14px">ยืนยันการเลือก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reports tab -->
+<div class="modal-overlay hidden" id="modal-reports-tab">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><span class="modal-title">ดาวน์โหลดรายงาน</span><button class="modal-close" onclick="closeModal('modal-reports-tab')">×</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div style="display:flex;gap:8px">
+          <select class="form-control" id="report-year-picker" style="flex:1">
+            <option value="">ทุกปี</option>
+          </select>
+          <select class="form-control" id="report-month-picker2" style="flex:1">
+            <option value="">ทุกเดือน</option>
+            <option value="1">มกราคม</option>
+            <option value="2">กุมภาพันธ์</option>
+            <option value="3">มีนาคม</option>
+            <option value="4">เมษายน</option>
+            <option value="5">พฤษภาคม</option>
+            <option value="6">มิถุนายน</option>
+            <option value="7">กรกฎาคม</option>
+            <option value="8">สิงหาคม</option>
+            <option value="9">กันยายน</option>
+            <option value="10">ตุลาคม</option>
+            <option value="11">พฤศจิกายน</option>
+            <option value="12">ธันวาคม</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-gradient btn-block" onclick="exportAllReports()" style="margin-top:4px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        ดาวน์โหลดรายงาน (Excel)
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Doc Detail -->
+<div class="modal-overlay hidden" id="modal-doc-detail">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><span class="modal-title" id="doc-detail-title">รายละเอียดเอกสาร</span><button class="modal-close" onclick="closeModal('modal-doc-detail')">×</button></div>
+    <div class="modal-body" id="doc-detail-body"></div>
+  </div>
+</div>
+
+<!-- Equipment Detail -->
+<div class="modal-overlay hidden" id="modal-equip-detail">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><span class="modal-title" id="detail-equip-name">รายละเอียด</span><button class="modal-close" onclick="closeModal('modal-equip-detail')">×</button></div>
+    <div class="modal-body" id="equip-detail-body"></div>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="modal-overlay hidden" id="modal-qr">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><span class="modal-title">สแกน QR Code</span><button class="modal-close" onclick="closeQR()">×</button></div>
+    <div class="modal-body">
+      <div class="qr-overlay">
+        <video id="qr-video" autoplay playsinline></video>
+        <div class="qr-frame"></div>
+      </div>
+      <div style="margin-top:14px">
+        <p style="font-size:13px;color:var(--ig-muted);margin-bottom:8px;text-align:center">หรือพิมพ์รหัสอุปกรณ์</p>
+        <div style="display:flex;gap:8px">
+          <input type="text" class="form-control" id="qr-manual-input" placeholder="รหัสอุปกรณ์...">
+          <button class="btn btn-primary" onclick="manualQRInput()">เพิ่ม</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ===== SUPABASE CONFIG (hardcoded - do not expose to client) =====
+const SB_URL = 'https://wpsmjutxirpyekdgviwp.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc21qdXR4aXJweWVrZGd2aXdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNTEzOTQsImV4cCI6MjA5NzgyNzM5NH0.WTaz2_GmXA4sP8XMNAgMys-_xszGU5iNodR8blPX-vM';
+let sb = null; // supabase client
+
+// ===== LOGIN SYSTEM (Supabase) =====
+let currentUser = null;
+let allCompanies = [];
+let allWarehouses = [];
+let equipments = [];
+let issueTransactions = [];
+let receiveTransactions = [];
+
+// ===== XSS PROTECTION =====
+// ทุกข้อความที่มาจากผู้ใช้/ฐานข้อมูล ต้องผ่านฟังก์ชันนี้ก่อนแทรกลงใน innerHTML เสมอ
+function escapeHtml(str){
+  if(str===null||str===undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function togglePass(){
+  const inp = document.getElementById('login-pass');
+  inp.type = inp.type==='password' ? 'text' : 'password';
+}
+
+async function doLogin(){
+  const u = document.getElementById('login-user').value.trim().toLowerCase();
+  const p = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  err.style.display='none';
+  if(!u||!p){ err.textContent='กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'; err.style.display='block'; return; }
+  btn.textContent='กำลังเข้าสู่ระบบ...'; btn.disabled=true;
+  try {
+    if(!sb) sb = window.supabase.createClient(SB_URL, SB_KEY);
+    // ตรวจสอบรหัสผ่านฝั่ง DB ผ่าน RPC (รหัสผ่าน hash ด้วย pgcrypto ไม่ถูกเทียบ/อ่านเป็น plain text ฝั่ง client)
+    const {data,error} = await sb.rpc('login_user', { p_username: u, p_password: p });
+    if(error){
+      // แยกกรณี error จริงของระบบ (เช่น ยังไม่ได้รัน SQL migration, RPC หาไม่เจอ, permission ผิด)
+      // ออกจากกรณีรหัสผ่านผิดปกติธรรมดา เพื่อให้แก้ปัญหาได้ตรงจุด ไม่ใช่เดา
+      console.error('login_user RPC error:', error);
+      err.textContent = 'เข้าสู่ระบบไม่สำเร็จ: ' + thaiError(error);
+      err.style.display='block';
+      return;
+    }
+    if(!data||!data.length){ err.textContent='ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'; err.style.display='block'; return; }
+    currentUser = data[0];
+    // สำคัญ: ห้ามซ่อนหน้า login จนกว่าจะมั่นใจว่าจะไปหน้าเลือกคลัง/เข้าคลังได้สำเร็จแน่นอน
+    // (เดิมซ่อนหน้า login ทันทีตรงนี้ ทำให้ถ้า error เกิดขึ้นระหว่างขั้นตอนถัดไป
+    //  ผู้ใช้จะหลุดไปเห็นหน้าใช้งานจริงโดยไม่รู้ว่าอยู่บริษัท/คลังไหน เพราะ error message
+    //  ถูกเขียนใส่กล่องที่อยู่ในหน้า login ซึ่งถูกซ่อนไปแล้ว)
+    await loadCompaniesAndWarehouses();
+    if(currentUser.role==='superuser'){
+      document.getElementById('btn-admin').style.display='';
+      document.getElementById('btn-switch-wh').style.display='';
+      hideLoginScreen();
+      showWarehouseSelector();
+    } else {
+      document.getElementById('btn-admin').style.display='none';
+      document.getElementById('btn-switch-wh').style.display='none';
+      const {data:uwData, error:uwErr} = await sb.from('user_warehouses').select('warehouse_id').eq('user_id',currentUser.id);
+      if(uwErr){ err.textContent='โหลดสิทธิ์คลังไม่สำเร็จ: '+uwErr.message; err.style.display='block'; toast(err.textContent,'error'); return; }
+      const whIds = (uwData||[]).map(r=>r.warehouse_id);
+      const myWH = allWarehouses.filter(w=>whIds.includes(w.id));
+      if(!myWH.length){
+        err.textContent='ไม่มีสิทธิ์เข้าถึงคลังใด ('+whIds.length+' รายการสิทธิ์, '+allWarehouses.length+' คลังทั้งหมด) ติดต่อ Admin';
+        err.style.display='block';
+        toast(err.textContent,'error');
+        return;
+      }
+      hideLoginScreen();
+      if(myWH.length===1) selectWarehouseObj(myWH[0]);
+      else showWarehouseSelector(myWH);
+    }
+  } catch(e) {
+    // ยืนยันว่าหน้า login จะกลับมาโชว์เสมอเมื่อเกิด error ไม่ว่าจะเกิดขั้นตอนไหนก็ตาม
+    // และแจ้งด้วย toast เพิ่ม เผื่อกล่อง error ในหน้า login ยังไม่ถูกโชว์ทันเวลา
+    currentUser = null;
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-screen').style.display='';
+    err.textContent = 'เชื่อมต่อไม่ได้: ' + (e.message||e); err.style.display='block';
+    toast(err.textContent,'error');
+    console.error('doLogin error', e);
+  } finally {
+    btn.textContent='เข้าสู่ระบบ'; btn.disabled=false;
+  }
+}
+
+function hideLoginScreen(){
+  const loginScr = document.getElementById('login-screen');
+  loginScr.style.display='none';
+  loginScr.classList.add('hidden');
+}
+
+// บริษัทคงที่ ไม่ต้องดึงจาก DB
+const FIXED_COMPANIES = [
+  {id:'pom', code:'POM', name:'บริษัท POM'},
+  {id:'num', code:'NUM', name:'บริษัท NUM'},
+  {id:'cvm', code:'CVM', name:'บริษัท CVM'},
+];
+
+async function loadCompaniesAndWarehouses(){
+  allCompanies = FIXED_COMPANIES;
+  const {data:wh} = await sb.from('warehouses').select('*').order('code');
+  // map company_id (stored as 'pom'/'num'/'cvm') to company object
+  allWarehouses = (wh||[]).map(w=>({
+    ...w,
+    companies: FIXED_COMPANIES.find(c=>c.id===w.company_id) || {name:'ไม่ระบุ'}
+  }));
+}
+
+function showWarehouseSelector(list){
+  const whs = list || allWarehouses;
+  if(currentUser?.role === 'superuser'){
+    // SuperUser: เลือกบริษัทก่อน
+    showCompanySelector(whs);
+  } else {
+    // User ทั่วไป: แสดงคลังที่มีสิทธิ์เลย
+    showWarehouseList(whs);
+  }
+}
+
+function showCompanySelector(whs){
+  const byCompany = {};
+  whs.forEach(w=>{
+    const cid = w.company_id?.toLowerCase()||'other';
+    if(!byCompany[cid]) byCompany[cid]={name:w.companies?.name||cid.toUpperCase(), whs:[]};
+    byCompany[cid].whs.push(w);
+  });
+  const COMPANY_STYLE = {
+    pom: {bg:'#eff6ff', color:'#2563eb', icon:'&#x1f3e2;'},
+    num: {bg:'#f0fdf4', color:'#16a34a', icon:'&#x1f3e2;'},
+    cvm: {bg:'#fdf4ff', color:'#9333ea', icon:'&#x1f3e2;'},
+  };
+  window._companyGroups = byCompany; // เก็บไว้อ้างอิงด้วย key แทน inline filter
+  document.getElementById('wh-screen-subtitle').textContent = 'เลือกบริษัท';
+  const adminBtn = document.getElementById('wh-admin-corner-btn');
+  adminBtn.style.display = 'inline-flex';
+  document.getElementById('wh-cards-container').innerHTML = Object.entries(byCompany).map(([cid,c])=>{
+    const st = COMPANY_STYLE[cid] || {bg:'#f5f3ff', color:'#7c3aed', icon:'&#x1f3e2;'};
+    return `<div class="warehouse-card" style="margin-bottom:10px" onclick="selectCompanyGroup('${cid}')">
+      <div class="warehouse-card-icon" style="background:${st.bg};font-size:24px">${st.icon}</div>
+      <div class="warehouse-card-info">
+        <div class="warehouse-card-name" style="color:${st.color};font-size:18px">${escapeHtml(c.name)}</div>
+        <div class="warehouse-card-desc">${c.whs.length} คลัง</div>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${st.color}" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`;
+  }).join('');
+  const ws=document.getElementById('warehouse-screen');
+  ws.classList.remove('hidden'); ws.style.display='';
+}
+
+function selectCompanyGroup(cid){
+  const group = window._companyGroups?.[cid];
+  if(!group){ toast('ไม่พบข้อมูลบริษัท','error'); return; }
+  showWarehouseList(group.whs);
+}
+
+function showWarehouseList(whs){
+  const isSuperUser = currentUser?.role === 'superuser';
+  document.getElementById('wh-admin-corner-btn').style.display = isSuperUser ? 'inline-flex' : 'none';
+  const backBtn = isSuperUser
+    ? `<button onclick="showCompanySelector(allWarehouses)" style="background:none;border:none;color:#7c3aed;font-size:13px;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;gap:4px;padding:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> กลับเลือกบริษัท
+      </button>` : '';
+  const companyName = whs[0]?.companies?.name || whs[0]?.company_id?.toUpperCase() || '';
+  document.getElementById('wh-screen-subtitle').textContent = companyName ? `${companyName} — เลือกคลัง` : 'เลือกคลัง';
+  window._whListCurrent = whs; // เก็บ list ไว้อ้างอิงด้วย index แทนการฝัง JSON ใน attribute
+  document.getElementById('wh-cards-container').innerHTML = backBtn + whs.map((w,idx)=>
+    `<div class="warehouse-card" style="margin-bottom:8px" onclick="selectWarehouseByIndex(${idx})">
+      <div class="warehouse-card-icon" style="background:#f5f3ff">&#x1f3ed;</div>
+      <div class="warehouse-card-info"><div class="warehouse-card-name" style="color:#7c3aed">${escapeHtml(w.name)}</div><div class="warehouse-card-desc">${escapeHtml(w.code)}</div></div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`).join('');
+  const ws2=document.getElementById('warehouse-screen');
+  ws2.classList.remove('hidden'); ws2.style.display='';
+}
+
+function selectWarehouseByIndex(idx){
+  const wh = window._whListCurrent?.[idx];
+  if(!wh){ toast('ไม่พบข้อมูลคลัง','error'); return; }
+  selectWarehouseObj(wh);
+}
+
+let _whSelecting=false;
+async function selectWarehouseObj(elOrObj){
+  let wh;
+  try {
+    wh = elOrObj instanceof Element ? JSON.parse(elOrObj.getAttribute('data-wh')) : elOrObj;
+  } catch(e) {
+    toast('เกิดข้อผิดพลาดในการอ่านข้อมูลคลัง','error');
+    console.error('selectWarehouseObj parse error', e);
+    return;
+  }
+  if(!wh || !wh.code || !wh.id){ toast('ไม่พบข้อมูลคลัง','error'); return; }
+  if(_whSelecting) return; _whSelecting=true; setTimeout(()=>{ _whSelecting=false; },1500);
+  currentWarehouse = wh.id;
+  currentWarehouseCode = wh.code; // เก็บรหัสคลัง (text) แยกไว้ใช้แสดงผล/ตั้งชื่อไฟล์เท่านั้น ไม่ใช้ query DB
+  const badge = document.getElementById('topbar-dept-badge');
+  const coName = wh.companies?.name || (wh.company_id ? 'บริษัท '+wh.company_id.toUpperCase() : '');
+  badge.textContent='🏭 '+(coName?coName+' - ':'')+wh.name; badge.style.display='inline-flex';
+  badge.style.background='#f5f3ff'; badge.style.color='#7c3aed';
+  document.getElementById('warehouse-screen').classList.add('hidden');
+  document.getElementById('warehouse-screen').style.display='none';
+  document.getElementById('issue-date').value=today();
+  document.getElementById('receive-date').value=today();
+  equipments=[]; issueTransactions=[]; receiveTransactions=[];
+  showSkeleton();
+  try{
+    await loadAll();
+    setConn(true);
+  } catch(e){
+    setConn(false);
+    toast('โหลดข้อมูลคลังไม่สำเร็จ: '+(e.message||JSON.stringify(e)),'error');
+    console.error('selectWarehouseObj loadAll error', e);
+  }
+}
+
+async function selectWarehouse(code){
+  const wh = allWarehouses.find(w=>w.code===code)||{code,name:code};
+  await selectWarehouseObj(wh);
+}
+
+function switchWarehouse(){
+  if(currentUser?.role!=='superuser'){ toast('สิทธิ์ไม่เพียงพอ','error'); return; }
+  currentWarehouse=null; currentWarehouseCode=null; equipments=[]; issueTransactions=[]; receiveTransactions=[];
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-equipment').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item-issue').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.nav-item').classList.add('active');
+  const s=document.getElementById('equip-search'); if(s) s.value='';
+  document.getElementById('topbar-dept-badge').style.display='none';
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));
+  // แสดงหน้าเลือกบริษัท
+  if(allWarehouses.length > 0){
+    showCompanySelector(allWarehouses);
+  } else {
+    // โหลดคลังใหม่ก่อน
+    loadCompaniesAndWarehouses().then(()=>showCompanySelector(allWarehouses));
+  }
+}
+
+function doLogout(){
+  currentUser=null; currentWarehouse=null; currentWarehouseCode=null; sb=null;
+  equipments=[]; issueTransactions=[]; receiveTransactions=[];
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-error').style.display='none';
+  document.getElementById('topbar-dept-badge').style.display='none';
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-equipment').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.nav-item').classList.add('active');
+  document.getElementById('warehouse-screen').classList.add('hidden');
+  document.getElementById('warehouse-screen').style.display='none';
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-screen').style.display='';
+  setConn(false);
+}
+
+// ===== ADMIN PANEL =====
+async function openAdmin(startTab){
+  await loadCompaniesAndWarehouses();
+  renderWarehouseAdmin(); await renderUsers();
+  renderNewUserWHList();
+  openModal('modal-admin');
+  if(startTab==='users'){
+    const btn = document.getElementById('admin-tab-users');
+    if(btn) switchAdminTab('users', btn);
+  }
+}
+
+function switchAdminTab(tab,btn){
+  ['warehouses','users'].forEach(t=>{
+    document.getElementById('admin-panel-'+t).style.display=t===tab?'':'none';
+    document.getElementById('admin-tab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='users') renderNewUserWHList();
+}
+
+
+
+
+function populateCompanySelect(){ /* fixed companies */ }
+
+function renderWarehouseAdmin(){
+  const byCompany={};
+  allWarehouses.forEach(w=>{ const k=w.company_id?.toUpperCase()||'ไม่ระบุ'; if(!byCompany[k]) byCompany[k]=[]; byCompany[k].push(w); });
+  const el=document.getElementById('warehouses-list');
+  if(!el) return;
+  el.innerHTML = Object.keys(byCompany).length
+    ? Object.entries(byCompany).sort().map(([cname,whs])=>`
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--ig-muted);margin-bottom:6px">บริษัท ${escapeHtml(cname)}</div>
+          ${whs.map(w=>`
+          <div style="border:1px solid var(--ig-border);border-radius:10px;margin-bottom:6px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px">
+              <span>&#x1f3ed;</span>
+              <div style="flex:1"><div style="font-weight:500">${escapeHtml(w.name)}</div><div style="font-size:12px;color:var(--ig-muted)">${escapeHtml(w.code)}</div></div>
+              <button onclick="toggleEditWH('${w.id}')" style="background:#eff6ff;color:#2563eb;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">แก้ไข</button>
+              <button onclick="deleteWarehouse('${w.id}')" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">ลบ</button>
+            </div>
+            <div id="edit-wh-panel-${w.id}" style="display:none;padding:8px 12px;background:#f9f9f9;border-top:1px solid var(--ig-border)">
+              <div style="display:flex;gap:8px">
+                <input type="text" id="edit-wh-name-${w.id}" class="form-control" value="${escapeHtml(w.name)}" placeholder="ชื่อคลัง" style="flex:2;font-size:13px">
+                <input type="text" id="edit-wh-code-${w.id}" class="form-control" value="${escapeHtml(w.code)}" placeholder="รหัสคลัง" style="flex:1;font-size:13px">
+                <button onclick="saveWarehouse('${w.id}')" style="background:#7c3aed;color:#fff;border:none;padding:4px 14px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap">บันทึก</button>
+              </div>
+            </div>
+          </div>`).join('')}
+        </div>`).join('')
+    : `<p style="color:var(--ig-muted);text-align:center">ยังไม่มีคลัง</p>`;
+}
+
+function toggleEditWH(id){
+  const el=document.getElementById('edit-wh-panel-'+id);
+  if(el) el.style.display=el.style.display==='none'?'block':'none';
+}
+
+async function saveWarehouse(id){
+  const name=document.getElementById('edit-wh-name-'+id)?.value.trim();
+  const code=document.getElementById('edit-wh-code-'+id)?.value.trim().toUpperCase();
+  if(!name||!code){ toast('กรอกชื่อและรหัสคลัง','error'); return; }
+  const {error}=await sb.from('warehouses').update({name,code}).eq('id',id);
+  if(error){ toast(thaiError(error),'error'); return; }
+  await loadCompaniesAndWarehouses(); renderWarehouseAdmin(); renderNewUserWHList();
+  toast('แก้ไขคลังแล้ว','success');
+}
+
+async function addWarehouse(){
+  const company_id=document.getElementById('new-wh-company').value; // 'pom'/'num'/'cvm'
+  const code=document.getElementById('new-wh-code').value.trim().toUpperCase();
+  const name=document.getElementById('new-wh-name').value.trim();
+  if(!company_id||!code||!name){ toast('กรอกข้อมูลให้ครบ','error'); return; }
+  const {error}=await sb.from('warehouses').insert({company_id,code,name});
+  if(error){ toast(thaiError(error),'error'); return; }
+  document.getElementById('new-wh-code').value=''; document.getElementById('new-wh-name').value='';
+  await loadCompaniesAndWarehouses(); renderWarehouseAdmin(); renderNewUserWHList();
+  toast('เพิ่มคลัง '+name+' แล้ว','success');
+}
+
+async function deleteWarehouse(id){
+  const name = allWarehouses.find(w=>w.id===id)?.name || '';
+  if(!confirm('ลบคลัง "'+name+'" ?')) return;
+  await sb.from('warehouses').delete().eq('id',id);
+  await loadCompaniesAndWarehouses(); renderWarehouseAdmin();
+  toast('ลบแล้ว','success');
+}
+
+let allUsers=[];
+let allUsersUWMap = {};
+
+async function renderUsers(){
+  const {data}=await sb.rpc('list_users');
+  allUsers=data||[];
+  const {data:uwData}=await sb.from('user_warehouses').select('user_id,warehouse_id,warehouses(id,name,code,company_id)');
+  allUsersUWMap={};
+  (uwData||[]).forEach(r=>{ if(!allUsersUWMap[r.user_id]) allUsersUWMap[r.user_id]=[]; allUsersUWMap[r.user_id].push(r.warehouses); });
+  filterUsers();
+}
+
+function filterUsers(){
+  const q=(document.getElementById('user-search')?.value||'').toLowerCase();
+  const filtered = q ? allUsers.filter(u=>(u.username+u.display_name).toLowerCase().includes(q)) : allUsers;
+  const el=document.getElementById('users-list');
+  if(!el) return;
+  el.innerHTML = filtered.map(u=>renderUserCard(u, allUsersUWMap[u.id]||[])).join('')
+    || `<p style="color:var(--ig-muted);text-align:center">${q?'ไม่พบผู้ใช้':'ยังไม่มีผู้ใช้'}</p>`;
+}
+
+function renderUserCard(u, whs){
+  return `<div style="padding:12px;border:1px solid var(--ig-border);border-radius:10px;margin-bottom:8px" id="ucard-${u.id}">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-size:20px">${u.role==='superuser'?'&#x1f451;':'&#x1f464;'}</span>
+      <div style="flex:1">
+        <div style="font-weight:600">${escapeHtml(u.display_name||u.username)} <span style="font-size:11px;color:var(--ig-muted)">(${escapeHtml(u.username)})</span></div>
+        <div style="font-size:11px;color:${u.role==='superuser'?'#7c3aed':'#2563eb'};font-weight:600">${u.role==='superuser'?'SuperUser':'User'}</div>
+      </div>
+      <button onclick="openEditUser('${u.id}')" style="background:#eff6ff;color:#2563eb;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">แก้ไข</button>
+      <button onclick="deleteUser('${u.id}')" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">ลบ</button>
+    </div>
+    ${u.role!=='superuser'?`
+      <div style="font-size:12px;color:var(--ig-muted);margin-bottom:4px">สิทธิ์คลัง:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${whs.map(w=>`<span style="background:#eff6ff;color:#2563eb;padding:2px 8px;border-radius:12px;font-size:11px">&#x1f3ed; ${escapeHtml(w.name)} <span style="opacity:0.6;font-size:10px">[${escapeHtml((w.company_id||'').toUpperCase())}]</span> <span onclick="revokeWH('${u.id}','${w.id}')" style="cursor:pointer;color:#dc2626;margin-left:4px">&times;</span></span>`).join('')||'<span style="color:var(--ig-muted);font-size:12px">ยังไม่มีสิทธิ์</span>'}
+      </div>
+      <div id="edit-wh-${u.id}" style="display:none;margin-top:8px">
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <select id="edit-wh-company-${u.id}" onchange="populateEditWHOptions('${u.id}')" style="font-size:12px;padding:4px 8px;border:1px solid var(--ig-border);border-radius:6px;flex:1">
+            <option value="">เลือกบริษัท...</option>
+            ${['pom','num','cvm'].filter(cid=>allWarehouses.some(w=>w.company_id?.toLowerCase()===cid)).map(cid=>`<option value="${cid}">บริษัท ${cid.toUpperCase()}</option>`).join('')}
+          </select>
+          <select id="edit-wh-pick-${u.id}" onchange="grantWH('${u.id}',this.value,this)" disabled style="font-size:12px;padding:4px 8px;border:1px solid var(--ig-border);border-radius:6px;flex:1.3">
+            <option value="">เลือกคลัง...</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input type="password" id="edit-pass-${u.id}" class="form-control" placeholder="เปลี่ยนรหัสผ่าน (ว่าง=ไม่เปลี่ยน)" style="font-size:12px;flex:1">
+          <button onclick="saveEditUser('${u.id}')" style="background:#7c3aed;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px">บันทึก</button>
+        </div>
+      </div>`
+    :`<div style="font-size:12px;color:#7c3aed">เข้าถึงได้ทุกคลัง</div>`}
+  </div>`;
+}
+
+function populateEditWHOptions(uid){
+  const cid = document.getElementById('edit-wh-company-'+uid)?.value;
+  const pickSel = document.getElementById('edit-wh-pick-'+uid);
+  if(!pickSel) return;
+  if(!cid){ pickSel.innerHTML='<option value="">เลือกคลัง...</option>'; pickSel.disabled=true; return; }
+  const whs = allWarehouses.filter(w=>w.company_id?.toLowerCase()===cid);
+  pickSel.innerHTML = '<option value="">เลือกคลัง...</option>' + whs.map(w=>`<option value="${w.id}">${escapeHtml(w.name)} (${escapeHtml(w.code)})</option>`).join('');
+  pickSel.disabled = false;
+}
+
+function openEditUser(uid){
+  const el=document.getElementById('edit-wh-'+uid);
+  if(!el) return;
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+async function saveEditUser(uid){
+  const passEl=document.getElementById('edit-pass-'+uid);
+  const newPass=passEl?.value?.trim();
+  if(newPass){
+    const {error}=await sb.rpc('set_user_password', { p_user_id: uid, p_new_password: newPass });
+    if(error){ toast(thaiError(error),'error'); return; }
+    passEl.value='';
+    toast('เปลี่ยนรหัสผ่านแล้ว','success');
+  }
+  document.getElementById('edit-wh-'+uid).style.display='none';
+  await renderUsers();
+}
+
+function renderNewUserWHList(){
+  const el=document.getElementById('new-user-wh-list');
+  if(!el) return;
+  window._selectedWHNew = new Set();
+  el.innerHTML = `
+    <div id="wh-new-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:26px"></div>
+    <div style="display:flex;gap:8px">
+      <select id="new-wh-company-pick" onchange="populateNewWHOptions()" style="font-size:13px;padding:6px 8px;border:1px solid var(--ig-border);border-radius:8px;flex:1">
+        <option value="">เลือกบริษัท...</option>
+        ${['pom','num','cvm'].filter(cid=>allWarehouses.some(w=>w.company_id?.toLowerCase()===cid)).map(cid=>`<option value="${cid}">บริษัท ${cid.toUpperCase()}</option>`).join('')}
+      </select>
+      <select id="new-wh-warehouse-pick" onchange="addWHToSelection()" disabled style="font-size:13px;padding:6px 8px;border:1px solid var(--ig-border);border-radius:8px;flex:1.3">
+        <option value="">เลือกคลัง...</option>
+      </select>
+    </div>`;
+  updateWHNewPreview();
+}
+
+function populateNewWHOptions(){
+  const cid = document.getElementById('new-wh-company-pick')?.value;
+  const pickSel = document.getElementById('new-wh-warehouse-pick');
+  if(!pickSel) return;
+  if(!cid){ pickSel.innerHTML='<option value="">เลือกคลัง...</option>'; pickSel.disabled=true; return; }
+  const whs = allWarehouses.filter(w=>w.company_id?.toLowerCase()===cid);
+  pickSel.innerHTML = '<option value="">เลือกคลัง...</option>' + whs.map(w=>`<option value="${w.id}">${escapeHtml(w.name)} (${escapeHtml(w.code)})</option>`).join('');
+  pickSel.disabled = false;
+}
+
+function addWHToSelection(){
+  const whId = document.getElementById('new-wh-warehouse-pick')?.value;
+  if(!whId) return;
+  if(!window._selectedWHNew) window._selectedWHNew = new Set();
+  window._selectedWHNew.add(whId);
+  updateWHNewPreview();
+  // รีเซ็ตให้เลือกคลังเพิ่มได้อีก
+  document.getElementById('new-wh-company-pick').value='';
+  document.getElementById('new-wh-warehouse-pick').innerHTML='<option value="">เลือกคลัง...</option>';
+  document.getElementById('new-wh-warehouse-pick').disabled=true;
+}
+
+function removeWHFromSelection(id){
+  window._selectedWHNew?.delete(id);
+  updateWHNewPreview();
+}
+
+function updateWHNewPreview(){
+  const prev=document.getElementById('wh-new-preview');
+  if(!prev) return;
+  if(!window._selectedWHNew||window._selectedWHNew.size===0){
+    prev.innerHTML='<span style="color:var(--ig-muted);font-size:12px">ยังไม่ได้เลือกคลัง</span>'; return;
+  }
+  prev.innerHTML=[...window._selectedWHNew].map(id=>{
+    const w=allWarehouses.find(x=>x.id===id);
+    return w?`<span style="background:#7c3aed;color:#fff;padding:3px 10px;border-radius:20px;font-size:12px">🏭 ${escapeHtml(w.name)} <span onclick="removeWHFromSelection('${id}')" style="cursor:pointer;margin-left:4px">&times;</span></span>`:'';
+  }).join('');
+}
+
+async function addUser(){
+  const username=document.getElementById('new-user-username').value.trim().toLowerCase();
+  const display=document.getElementById('new-user-display').value.trim();
+  const pass=document.getElementById('new-user-pass').value;
+  const role=document.getElementById('new-user-role').value;
+  if(!username||!pass){ toast('กรอกชื่อผู้ใช้และรหัสผ่าน','error'); return; }
+  const {data:nu,error}=await sb.rpc('create_user_hashed', { p_username: username, p_password: pass, p_display_name: display||username, p_role: role }).single();
+  if(error){ toast(thaiError(error),'error'); return; }
+  if(role!=='superuser'){
+    const checked=[...(window._selectedWHNew||new Set())];
+    if(checked.length) await sb.from('user_warehouses').insert(checked.map(wid=>({user_id:nu.id,warehouse_id:wid})));
+  }
+  document.getElementById('new-user-username').value='';
+  document.getElementById('new-user-display').value='';
+  document.getElementById('new-user-pass').value='';
+  window._selectedWHNew = new Set();
+  renderNewUserWHList();
+  await renderUsers();
+  toast('เพิ่มผู้ใช้ '+username+' แล้ว','success');
+}
+
+async function grantWH(userId,whId,sel){
+  if(!whId) return;
+  const {error} = await sb.from('user_warehouses').upsert(
+    {user_id:userId,warehouse_id:whId},
+    {onConflict:'user_id,warehouse_id'}
+  );
+  if(error){ toast(thaiError(error),'error'); return; }
+  await renderUsers();
+  toast('เพิ่มสิทธิ์คลังแล้ว','success');
+}
+
+async function revokeWH(userId,whId){
+  await sb.from('user_warehouses').delete().eq('user_id',userId).eq('warehouse_id',whId);
+  await renderUsers();
+  toast('นำสิทธิ์ออกแล้ว','success');
+}
+
+async function deleteUser(id){
+  const username = allUsers.find(u=>u.id===id)?.username || '';
+  if(username==='superuser'){ toast('ไม่สามารถลบ superuser หลัก','error'); return; }
+  if(!confirm('ลบผู้ใช้ "'+username+'" ?')) return;
+  const { error } = await sb.rpc('delete_app_user', { p_user_id: id });
+  if(error){ toast(thaiError(error),'error'); return; }
+  await renderUsers();
+  toast('ลบแล้ว','success');
+}
+
+// ===== WAREHOUSE COMPAT =====
+let currentWarehouse = null;
+let currentWarehouseCode = null;
+let editingIssueId = null, issueTxItems = [];
+let editingReceiveId = null, receiveTxItems = [];
+let pickerTarget = null, pickerSelected = {};
+let qrTarget = null, qrStream = null;
+let issueChart = null, receiveChart = null;
+
+// ===== THAI ERROR TRANSLATOR =====
+function thaiError(e){
+  const msg = (e?.message || e?.error_description || String(e)).toLowerCase();
+  if(msg.includes('could not find the function') || msg.includes('function') && msg.includes('does not exist'))
+    return 'ยังไม่ได้รันไฟล์ migration.sql ใน Supabase (หาฟังก์ชันที่จำเป็นไม่เจอ) กรุณารัน SQL migration ก่อนใช้งาน';
+  if(msg.includes('insufficient_stock'))
+    return 'สต๊อกไม่พอสำหรับรายการนี้ (อาจมีคนอื่นเบิกไปพร้อมกัน) กรุณาลองใหม่';
+  if(msg.includes('duplicate key') || msg.includes('unique constraint') || msg.includes('unique_violation'))
+    return 'ข้อมูลซ้ำ: รหัสหรือชื่อนี้มีอยู่แล้วในระบบ';
+  if(msg.includes('foreign key') || msg.includes('foreign_key_violation'))
+    return 'ไม่สามารถลบได้: ข้อมูลนี้ถูกใช้งานอยู่';
+  if(msg.includes('not null') || msg.includes('null value'))
+    return 'กรุณากรอกข้อมูลให้ครบถ้วน';
+  if(msg.includes('check constraint') || msg.includes('check_violation'))
+    return 'ข้อมูลไม่ถูกต้องตามเงื่อนไขที่กำหนด';
+  if(msg.includes('permission denied') || msg.includes('insufficient_privilege'))
+    return 'ไม่มีสิทธิ์ดำเนินการนี้';
+  if(msg.includes('jwt') || msg.includes('invalid api key') || msg.includes('apikey'))
+    return 'API Key ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่า';
+  if(msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('network'))
+    return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต';
+  if(msg.includes('timeout'))
+    return 'การเชื่อมต่อหมดเวลา กรุณาลองใหม่';
+  if(msg.includes('does not exist') || msg.includes('relation') || msg.includes('undefined_table'))
+    return 'ไม่พบตารางข้อมูล กรุณาตรวจสอบฐานข้อมูล';
+  if(msg.includes('value too long') || msg.includes('string_data_right_truncation'))
+    return 'ข้อมูลยาวเกินไป กรุณากรอกให้สั้นลง';
+  if(msg.includes('row-level security') || msg.includes('rls'))
+    return 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้ (RLS)';
+  return 'เกิดข้อผิดพลาด: ' + (e?.message || String(e));
+}
+
+// ===== CONFIG =====
+// credentials are hardcoded server-side (SB_URL / SB_KEY above); connection is
+// established lazily in doLogin() the first time a user logs in.
+
+function setConn(ok){
+  document.getElementById('conn-dot').className = 'conn-dot' + (ok ? ' on' : '');
+  document.getElementById('conn-text').textContent = ok ? 'เชื่อมต่อแล้ว' : 'ออฟไลน์';
+}
+
+// ===== IMAGE CACHE =====
+function imgCacheKey(id){ return `eq_img_${id}`; }
+function getCachedImg(id){ try{ return localStorage.getItem(imgCacheKey(id))||''; }catch(e){ return ''; } }
+function setCachedImg(id,url){ try{ localStorage.setItem(imgCacheKey(id),url||''); }catch(e){} }
+
+// ===== LOAD ALL FROM SUPABASE =====
+async function loadAll(){
+  if(!sb) return;
+  // โหลดทุกอย่างใน query เดียว แต่ใช้ cached image ก่อน
+  const [eqRes, issRes, recRes] = await Promise.all([
+    sb.from('materials').select('id,code,name,unit,min_qty,current_stock,image_url').eq('warehouse_id', currentWarehouse).order('code'),
+    sb.from('issuing_documents').select('id,doc_number,date,requester_name,department,note,issuing_items(id,quantity,materials(code,name,unit))').eq('warehouse_id', currentWarehouse).order('created_at', {ascending:false}),
+    sb.from('receiving_documents').select('id,doc_number,date,note,receiving_items(id,quantity,materials(code,name,unit))').eq('warehouse_id', currentWarehouse).order('created_at', {ascending:false}),
+  ]);
+  if(eqRes.error) throw eqRes.error;
+  if(issRes.error) throw issRes.error;
+  if(recRes.error) throw recRes.error;
+  equipments = (eqRes.data||[]).map(r=>{
+    const cached = getCachedImg(r.id);
+    if(r.image_url && r.image_url !== cached) setCachedImg(r.id, r.image_url);
+    return { id:r.id, code:r.code, name:r.name, unit:r.unit, minQty:r.min_qty||0, qty:r.current_stock||0, img: r.image_url || cached };
+  });
+  issueTransactions = (issRes.data||[]).map(mapIssuingDoc);
+  receiveTransactions = (recRes.data||[]).map(mapReceivingDoc);
+  renderAll();
+}
+
+// ===== DATA MAPPERS =====
+function mapMaterial(r){ return { id:r.id, code:r.code, name:r.name, unit:r.unit, minQty:r.min_qty||0, qty:r.current_stock||0, img:r.image_url||'' }; }
+function mapIssuingDoc(r){
+  return { id:r.id, docNum:r.doc_number, date:r.date, requester:r.requester_name, dept:r.department||'', note:r.note||'',
+    items:(r.issuing_items||[]).map(i=>{ const eq=equipments.find(e=>e.code===i.materials?.code); return { code:i.materials?.code||'', name:i.materials?.name||'', qty:i.quantity, unit:i.materials?.unit||'', img:eq?.img||getCachedImg(eq?.id||'') }; }) };
+}
+function mapReceivingDoc(r){
+  return { id:r.id, docNum:r.doc_number, date:r.date, note:r.note||'',
+    items:(r.receiving_items||[]).map(i=>{ const eq=equipments.find(e=>e.code===i.materials?.code); return { code:i.materials?.code||'', name:i.materials?.name||'', qty:i.quantity, unit:i.materials?.unit||'', img:eq?.img||getCachedImg(eq?.id||'') }; }) };
+}
+
+// ===== RENDER =====
+function renderAll(){
+  renderEquip(); renderIssueList(); renderReceiveList();
+  renderStockReport(); renderIssueReport(); renderReceiveReport(); renderEquipReport(); checkLowStock();
+}
+
+// ===== EQUIPMENT =====
+function renderEquip(){
+  const grid = document.getElementById('product-grid');
+  const empty = document.getElementById('equipment-empty');
+  const q = (document.getElementById('equip-search')?.value || '').toLowerCase().trim();
+  const filtered = (q ? equipments.filter(e => e.name.toLowerCase().includes(q) || e.code.toLowerCase().includes(q)) : [...equipments])
+    .sort((a,b) => a.code.localeCompare(b.code, undefined, {numeric:true}));
+  const total = equipments.length, emptyCount = equipments.filter(e=>e.qty===0).length, low = equipments.filter(e=>e.qty>0 && e.qty<=e.minQty).length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-empty').textContent = emptyCount;
+  document.getElementById('stat-low').textContent = low;
+  document.getElementById('stat-ok').textContent = total - emptyCount - low;
+  if(!filtered.length){ grid.style.display='none'; empty.style.display='block';
+    document.getElementById('equipment-empty').innerHTML = q
+      ? `<div class="empty-icon">🔍</div><div class="empty-text">ไม่พบ "${escapeHtml(q)}"</div><div class="empty-sub">ลองค้นหาด้วยคำอื่น</div>`
+      : `<div class="empty-icon">📦</div><div class="empty-text">ยังไม่มีอุปกรณ์สำนักงาน</div><div class="empty-sub">กดปุ่ม "เพิ่มอุปกรณ์" เพื่อเริ่มต้น</div>`;
+  } else { grid.style.display='grid'; grid.style.gridTemplateColumns='repeat(5,1fr)'; empty.style.display='none'; }
+  grid.innerHTML = filtered.map(eq=>`
+    <div class="product-tile" onclick="showEquipDetail('${eq.id}')">
+      ${eq.img ? `<img src="${escapeHtml(eq.img)}" alt="${escapeHtml(eq.name)}" onerror="this.style.display='none'">` :
+        `<div class="product-no-img"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><div style="font-size:9px;color:#aaa;margin-top:3px">${escapeHtml(eq.name)}</div></div>`}
+      ${eq.qty===0 ? `<div class="tile-low" style="background:#b91c1c">หมด</div>` : eq.qty<=eq.minQty ? `<div class="tile-low" style="background:#facc15;color:#fff">ใกล้หมด</div>` : ''}
+      <div class="tile-name">${escapeHtml(eq.name)}</div>
+      <div class="tile-overlay"><div style="font-weight:700;font-size:15px">${eq.qty}</div><div style="font-size:11px">${escapeHtml(eq.unit)}</div><div style="font-size:10px;opacity:.8">${escapeHtml(eq.code)}</div></div>
+    </div>`).join('');
+  renderStories();
+}
+
+function renderStories(){
+  const s = document.getElementById('category-stories');
+  const low = equipments.filter(e=>e.qty<=e.minQty);
+  const emptyItems = equipments.filter(e=>e.qty===0);
+  const lowItems = equipments.filter(e=>e.qty>0 && e.qty<=e.minQty);
+  const items = [
+    {label:'ทั้งหมด', count:equipments.length, icon:'📦'},
+    {label:'ใกล้หมด', count:lowItems.length, icon:'⚠️'},
+    {label:'หมด', count:emptyItems.length, icon:'🚫'},
+    ...equipments.slice(0,5).map(e=>({label:e.name.length>6?e.name.slice(0,6)+'…':e.name, count:`${e.qty} ${e.unit}`, img:e.img}))
+  ];
+  s.innerHTML = items.map((x,i)=>{
+    const ringColor = i===2 ? '#b91c1c' : '';
+    const ringStyle = ringColor ? `style="background:conic-gradient(${ringColor} 0%,${ringColor} 100%)"` : '';
+    return `<div class="story-item"><div class="story-ring" ${ringStyle}><div class="story-ring-inner">${x.img?`<img src="${escapeHtml(x.img)}" alt="">`:`<div class="story-icon">${x.icon||'📦'}</div>`}</div></div><div class="story-label">${escapeHtml(x.label)}</div><div class="story-count">${escapeHtml(x.count)}</div></div>`;
+  }).join('');
+}
+
+function showEquipDetail(id){
+  const eq = equipments.find(e=>e.id===id); if(!eq) return;
+  document.getElementById('detail-equip-name').textContent = eq.name;
+  const isLow = eq.qty <= eq.minQty;
+  document.getElementById('equip-detail-body').innerHTML = `
+    ${eq.img ? `<img src="${escapeHtml(eq.img)}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-bottom:14px">` : ''}
+    <table class="detail-table">
+      <tr><td style="color:var(--ig-muted);width:90px">รหัส</td><td style="font-weight:500">${escapeHtml(eq.code)}</td></tr>
+      <tr><td style="color:var(--ig-muted)">ชื่อ</td><td>${escapeHtml(eq.name)}</td></tr>
+      <tr><td style="color:var(--ig-muted)">คงเหลือ</td><td><span style="font-size:22px;font-weight:700;color:${isLow?'var(--ig-red)':'var(--ig-green)'}">${eq.qty}</span> <span style="color:var(--ig-muted)">${escapeHtml(eq.unit)}</span></td></tr>
+      <tr><td style="color:var(--ig-muted)">สถานะ</td><td>${eq.qty===0?'<span class="badge badge-danger" style="background:#b91c1c;color:#fff">🚫 หมด</span>':isLow?'<span class="badge" style="background:#fef3c7;color:#92400e">⚠️ ใกล้หมด</span>':'<span class="badge badge-success">✓ ปกติ</span>'}</td></tr>
+      <tr><td style="color:var(--ig-muted)">ขั้นต่ำ</td><td>${eq.minQty} ${escapeHtml(eq.unit)}</td></tr>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-outline btn-block" onclick="editEquipment('${eq.id}')">✏️ แก้ไข</button>
+      <button class="btn btn-danger btn-block" onclick="deleteEquipment('${eq.id}')">🗑 ลบ</button>
+    </div>`;
+  openModal('modal-equip-detail');
+}
+
+function openAddEquip(){
+  document.getElementById('modal-equip-title').textContent = 'เพิ่มอุปกรณ์สำนักงาน';
+  ['equip-edit-id','equip-code','equip-name','equip-unit','equip-img-data','equip-img-url'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('equip-min-qty').value = 5;
+  resetImgPreview();
+  openModal('modal-add-equipment');
+}
+
+function editEquipment(id){
+  const eq = equipments.find(e=>e.id===id); if(!eq) return;
+  closeModal('modal-equip-detail');
+  document.getElementById('modal-equip-title').textContent = 'แก้ไขอุปกรณ์';
+  document.getElementById('equip-edit-id').value = eq.id;
+  document.getElementById('equip-code').value = eq.code;
+  document.getElementById('equip-name').value = eq.name;
+  document.getElementById('equip-unit').value = eq.unit;
+  document.getElementById('equip-min-qty').value = eq.minQty;
+  document.getElementById('equip-img-data').value = eq.img || '';
+  document.getElementById('equip-img-url').value = (eq.img && !eq.img.startsWith('data:')) ? eq.img : '';
+  if(eq.img) document.getElementById('equip-img-preview').innerHTML = `<img src="${escapeHtml(eq.img)}" style="max-height:150px;border-radius:8px">`;
+  else resetImgPreview();
+  openModal('modal-add-equipment');
+}
+
+async function deleteEquipment(id){
+  if(!confirm('ลบอุปกรณ์นี้?')) return;
+  const { error } = await sb.from('materials').delete().eq('id', id);
+  if(error){ toast(thaiError(error),'error'); return; }
+  closeModal('modal-equip-detail');
+  await reloadEquip();
+  toast('ลบแล้ว', 'error');
+}
+
+async function saveEquipment(){
+  const code = document.getElementById('equip-code').value.trim();
+  const name = document.getElementById('equip-name').value.trim();
+  const unit = document.getElementById('equip-unit').value.trim();
+  const minQty = parseInt(document.getElementById('equip-min-qty').value)||0;
+  const img = document.getElementById('equip-img-data').value;
+  const editId = document.getElementById('equip-edit-id').value;
+  if(!code||!name||!unit){ toast('กรุณากรอกข้อมูลที่จำเป็น','error'); return; }
+  const btn = document.getElementById('save-equip-btn');
+  btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...'; btn.disabled = true;
+
+  const payload = { code, name, unit, min_qty: minQty, image_url: img||null };
+  let error;
+  if(editId){
+    ({ error } = await sb.from('materials').update(payload).eq('id', editId));
+  } else {
+    ({ error } = await sb.from('materials').insert({ ...payload, current_stock: 0, warehouse_id: currentWarehouse }));
+  }
+  if(error){ toast(thaiError(error),'error'); btn.innerHTML='บันทึก'; btn.disabled=false; return; }
+  await reloadEquip();
+  closeModal('modal-add-equipment');
+  btn.innerHTML = 'บันทึก'; btn.disabled = false;
+  toast('บันทึกสำเร็จ ✓','success');
+}
+
+function resetImgPreview(){
+  document.getElementById('equip-img-preview').innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" style="margin:0 auto;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p style="font-size:13px;color:#bbb;margin-top:8px">แตะเพื่อเลือกรูป</p>`;
+}
+
+function resizeImageDataUrl(dataUrl, maxSize, quality, cb){
+  const img = new Image();
+  img.onload = () => {
+    let w=img.width, h=img.height;
+    if(w>maxSize||h>maxSize){ const r=Math.min(maxSize/w,maxSize/h); w=Math.round(w*r); h=Math.round(h*r); }
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    cb(c.toDataURL('image/jpeg', quality));
+  };
+  img.onerror = () => cb(null);
+  img.src = dataUrl;
+}
+
+function previewEquipImg(input){
+  const file = input.files[0]; if(!file) return;
+  // แสดง loading ทันที
+  document.getElementById('equip-img-preview').innerHTML =
+    `<div style="padding:16px;color:var(--ig-muted);font-size:13px">⏳ กำลังโหลดรูป...</div>`;
+  const r = new FileReader();
+  r.onload = e => {
+    resizeImageDataUrl(e.target.result, 600, 0.75, resized => {
+      if(!resized){ toast('ไม่สามารถโหลดรูปได้','error'); resetImgPreview(); return; }
+      // ตรวจขนาด base64 (Supabase text limit ~1MB)
+      if(resized.length > 900000){
+        resizeImageDataUrl(e.target.result, 400, 0.65, resized2 => {
+          if(!resized2){ toast('รูปใหญ่เกินไป','error'); resetImgPreview(); return; }
+          document.getElementById('equip-img-data').value = resized2;
+          document.getElementById('equip-img-preview').innerHTML =
+            `<img src="${resized2}" style="max-height:150px;border-radius:8px"><p style="font-size:11px;color:var(--ig-muted);margin-top:4px">✓ เลือกรูปแล้ว (บีบอัดแล้ว)</p>`;
+          document.getElementById('equip-img-url').value = '';
+        });
+        return;
+      }
+      document.getElementById('equip-img-data').value = resized;
+      document.getElementById('equip-img-preview').innerHTML =
+        `<img src="${resized}" style="max-height:150px;border-radius:8px"><p style="font-size:11px;color:var(--ig-muted);margin-top:4px">✓ เลือกรูปแล้ว</p>`;
+      document.getElementById('equip-img-url').value = '';
+    });
+  };
+  r.onerror = () => { toast('อ่านไฟล์ไม่ได้','error'); resetImgPreview(); };
+  r.readAsDataURL(file);
+}
+
+function previewEquipImgUrl(url){
+  if(!url){ resetImgPreview(); document.getElementById('equip-img-data').value=''; return; }
+  document.getElementById('equip-img-data').value = url;
+  document.getElementById('equip-img-preview').innerHTML = `<img src="${url}" style="max-height:150px;border-radius:8px" onerror="this.style.display='none'">`;
+}
+
+async function reloadEquip(){
+  const { data } = await sb.from('materials').select('*').eq('warehouse_id', currentWarehouse).order('code');
+  equipments = (data||[]).map(mapMaterial);
+  renderEquip(); renderStockReport(); checkLowStock();
+}
+
+// ===== ISSUE LIST =====
+function renderIssueList(){
+  const wrap = document.getElementById('issue-list-wrap');
+  const sorted = [...issueTransactions].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!sorted.length){ wrap.innerHTML=`<div class="empty-state"><div class="empty-icon">📤</div><div class="empty-text">ยังไม่มีรายการเบิก</div></div>`; return; }
+  wrap.innerHTML = `<div class="card"><div style="padding:0">${sorted.map(tx=>{
+    const total = (tx.items||[]).reduce((s,i)=>s+(i.qty||0),0);
+    const summary = (tx.items||[]).map(i=>`${escapeHtml(i.name)} ×${i.qty}`).join(', ');
+    return `<div class="tx-item">
+      <div class="tx-avatar" style="background:linear-gradient(135deg,#ffeef0,#ffd6da)">📤</div>
+      <div class="tx-info" onclick="viewDoc('issue','${tx.id}')">
+        <div class="tx-name">${escapeHtml(tx.requester)} <span style="color:var(--ig-muted);font-size:11px">${escapeHtml(tx.dept||'')}</span></div>
+        <div class="tx-sub">${escapeHtml(tx.docNum)} · ${fmtDate(tx.date)}</div>
+        <div class="tx-sub">${summary}</div>
+        <div class="tx-actions">
+          <button class="btn btn-sm btn-outline" style="padding:3px 10px" onclick="event.stopPropagation();editIssue('${tx.id}')">✏️ แก้ไข</button>
+          <button class="btn btn-sm btn-danger" style="padding:3px 10px" onclick="event.stopPropagation();deleteIssue('${tx.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="tx-amount"><div class="tx-qty out">-${total}</div><div class="tx-date">ชิ้น</div></div>
+    </div>`;
+  }).join('')}</div></div>`;
+}
+
+function openCreateIssue(){
+  editingIssueId = null;
+  document.getElementById('modal-issue-title').textContent = 'สร้างรายการเบิก';
+  document.getElementById('issue-edit-id').value = '';
+  document.getElementById('issue-doc-num').textContent = genNum('IS');
+  document.getElementById('issue-date').value = today();
+  ['issue-requester','issue-dept','issue-note'].forEach(id=>document.getElementById(id).value='');
+  issueTxItems = []; renderIssueTxItems(); openModal('modal-create-issue');
+}
+
+function editIssue(id){
+  const tx = issueTransactions.find(t=>t.id===id); if(!tx) return;
+  editingIssueId = id;
+  document.getElementById('modal-issue-title').textContent = 'แก้ไขรายการเบิก';
+  document.getElementById('issue-edit-id').value = id;
+  document.getElementById('issue-doc-num').textContent = tx.docNum;
+  document.getElementById('issue-date').value = tx.date;
+  document.getElementById('issue-requester').value = tx.requester;
+  document.getElementById('issue-dept').value = tx.dept||'';
+  document.getElementById('issue-note').value = tx.note||'';
+  issueTxItems = (tx.items||[]).map(i=>({...i}));
+  renderIssueTxItems(); openModal('modal-create-issue');
+}
+
+async function deleteIssue(id){
+  if(!confirm('ลบรายการเบิกนี้?\n(สต๊อกจะถูกคืน)')) return;
+  // เรียก RPC เดียวที่ทำงานแบบ atomic ทั้งคืนสต๊อกและลบเอกสารในทรานแซกชันเดียวฝั่ง DB
+  const { error } = await sb.rpc('delete_issuing_document', { p_doc_id: id });
+  if(error){ toast(thaiError(error),'error'); return; }
+  await loadAll();
+  toast('ลบรายการเบิกแล้ว','error');
+}
+
+function renderIssueTxItems(){
+  const el = document.getElementById('issue-items-list');
+  if(!issueTxItems.length){ el.innerHTML=`<div class="empty-state" style="padding:20px"><div class="empty-sub">กดเลือกอุปกรณ์</div></div>`; return; }
+  el.innerHTML = issueTxItems.map((item,i)=>{
+    const avail = getAvailStock(item.code, editingIssueId);
+    return `<div class="checkout-item">
+      <div class="tx-avatar">${item.img?`<img src="${escapeHtml(item.img)}" alt="">`:item.qty>avail?'⚠️':'📦'}</div>
+      <div class="checkout-item-name">
+        <div style="font-weight:500;font-size:13px">${escapeHtml(item.name)}</div>
+        <div style="font-size:11px;color:var(--ig-muted)">${escapeHtml(item.code)} · ${escapeHtml(item.unit)}</div>
+        <div style="font-size:11px;color:${item.qty>avail?'var(--ig-red)':'var(--ig-blue)'}">คงเหลือ: ${avail} ${escapeHtml(item.unit)}</div>
+      </div>
+      <div class="checkout-item-qty">
+        <button class="qty-btn" onclick="adjIssue(${i},-1)">−</button>
+        <span class="qty-num" style="color:${item.qty>avail?'var(--ig-red)':''}">${item.qty}</span>
+        <button class="qty-btn" onclick="adjIssue(${i},1)">+</button>
+        <button class="qty-btn" onclick="rmIssue(${i})" style="color:var(--ig-red);border-color:var(--ig-red)">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getAvailStock(code, excludeId=null){
+  const eq = equipments.find(e=>e.code===code); if(!eq) return 0;
+  let base = eq.qty||0;
+  if(excludeId){ const tx=issueTransactions.find(t=>t.id===excludeId); if(tx){ const it=(tx.items||[]).find(i=>i.code===code); if(it) base+=it.qty; } }
+  return base;
+}
+
+function adjIssue(i,d){ issueTxItems[i].qty=Math.max(1,(issueTxItems[i].qty||1)+d); renderIssueTxItems(); }
+function rmIssue(i){ issueTxItems.splice(i,1); renderIssueTxItems(); }
+
+async function submitIssue(){
+  const date = document.getElementById('issue-date').value;
+  const requester = document.getElementById('issue-requester').value.trim();
+  const dept = document.getElementById('issue-dept').value.trim();
+  const note = document.getElementById('issue-note').value.trim();
+  const editId = document.getElementById('issue-edit-id').value;
+  if(!date){ toast('กรุณาเลือกวันที่','error'); return; }
+  if(!requester){ toast('กรุณากรอกชื่อผู้เบิก','error'); return; }
+  if(!dept){ toast('กรุณากรอกหน่วยงาน','error'); return; }
+  if(!issueTxItems.length){ toast('กรุณาเลือกอุปกรณ์','error'); return; }
+  for(const item of issueTxItems){
+    const avail = getAvailStock(item.code, editId||null);
+    if(item.qty>avail){ toast(`${item.name}: มีคงเหลือเพียง ${avail} ${item.unit}`,'error'); return; }
+  }
+  const btn = document.getElementById('submit-issue-btn');
+  btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...'; btn.disabled = true;
+
+  // เตรียมรายการเป็น material_id/quantity สำหรับส่งให้ DB function ตัดสต๊อกแบบ atomic
+  const itemsPayload = issueTxItems.map(it=>{
+    const eq = equipments.find(e=>e.code===it.code);
+    return { material_id: eq?.id, quantity: it.qty };
+  });
+
+  try {
+    if(editId){
+      const docNum = document.getElementById('issue-doc-num').textContent;
+      const { error } = await sb.rpc('update_issuing_document', {
+        p_doc_id: editId, p_doc_number: docNum, p_date: date,
+        p_requester: requester, p_department: dept, p_note: note, p_items: itemsPayload
+      });
+      if(error) throw error;
+    } else {
+      // ให้ DB จองเลขที่เอกสารแบบ atomic ตอนบันทึกจริง กันเลขซ้ำเมื่อมีคนบันทึกพร้อมกัน
+      const { data: docNum, error: numErr } = await sb.rpc('next_doc_number', { p_warehouse_id: currentWarehouse, p_prefix: 'IS' });
+      if(numErr) throw numErr;
+      document.getElementById('issue-doc-num').textContent = docNum;
+      const { error } = await sb.rpc('create_issuing_document', {
+        p_warehouse_id: currentWarehouse, p_doc_number: docNum, p_date: date,
+        p_requester: requester, p_department: dept, p_note: note, p_items: itemsPayload
+      });
+      if(error) throw error;
+    }
+    await loadAll();
+    toast('บันทึกการเบิกสำเร็จ ✓','success');
+  } catch(e){
+    toast(thaiError(e),'error');
+  }
+  closeModal('modal-create-issue');
+  btn.innerHTML = 'บันทึกการเบิก'; btn.disabled = false;
+}
+
+// ===== RECEIVE LIST =====
+function renderReceiveList(){
+  const wrap = document.getElementById('receive-list-wrap');
+  const sorted = [...receiveTransactions].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!sorted.length){ wrap.innerHTML=`<div class="empty-state"><div class="empty-icon">📥</div><div class="empty-text">ยังไม่มีรายการรับเข้า</div></div>`; return; }
+  wrap.innerHTML = `<div class="card"><div style="padding:0">${sorted.map(tx=>{
+    const total = (tx.items||[]).reduce((s,i)=>s+(i.qty||0),0);
+    const summary = (tx.items||[]).map(i=>`${escapeHtml(i.name)} ×${i.qty}`).join(', ');
+    return `<div class="tx-item">
+      <div class="tx-avatar" style="background:linear-gradient(135deg,#eafaf0,#c3f0d0)">📥</div>
+      <div class="tx-info" onclick="viewDoc('receive','${tx.id}')">
+        <div class="tx-name">${escapeHtml(tx.docNum)}</div>
+        <div class="tx-sub">${fmtDate(tx.date)}${tx.note?' · '+escapeHtml(tx.note):''}</div>
+        <div class="tx-sub">${summary}</div>
+        <div class="tx-actions">
+          <button class="btn btn-sm btn-outline" style="padding:3px 10px" onclick="event.stopPropagation();editReceive('${tx.id}')">✏️ แก้ไข</button>
+          <button class="btn btn-sm btn-danger" style="padding:3px 10px" onclick="event.stopPropagation();deleteReceive('${tx.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="tx-amount"><div class="tx-qty in">+${total}</div><div class="tx-date">ชิ้น</div></div>
+    </div>`;
+  }).join('')}</div></div>`;
+}
+
+function openCreateReceive(){
+  editingReceiveId = null;
+  document.getElementById('modal-receive-title').textContent = 'สร้างรายการรับเข้า';
+  document.getElementById('receive-edit-id').value = '';
+  document.getElementById('receive-doc-num').textContent = genNum('RC');
+  document.getElementById('receive-date').value = today();
+  document.getElementById('receive-note').value = '';
+  receiveTxItems = []; renderReceiveTxItems(); openModal('modal-create-receive');
+}
+
+function editReceive(id){
+  const tx = receiveTransactions.find(t=>t.id===id); if(!tx) return;
+  editingReceiveId = id;
+  document.getElementById('modal-receive-title').textContent = 'แก้ไขรายการรับเข้า';
+  document.getElementById('receive-edit-id').value = id;
+  document.getElementById('receive-doc-num').textContent = tx.docNum;
+  document.getElementById('receive-date').value = tx.date;
+  document.getElementById('receive-note').value = tx.note||'';
+  receiveTxItems = (tx.items||[]).map(i=>({...i}));
+  renderReceiveTxItems(); openModal('modal-create-receive');
+}
+
+async function deleteReceive(id){
+  if(!confirm('ลบรายการรับเข้านี้?\n(สต๊อกจะถูกปรับลด)')) return;
+  const { error } = await sb.rpc('delete_receiving_document', { p_doc_id: id });
+  if(error){ toast(thaiError(error),'error'); return; }
+  await loadAll();
+  toast('ลบรายการรับเข้าแล้ว','error');
+}
+
+function renderReceiveTxItems(){
+  const el = document.getElementById('receive-items-list');
+  if(!receiveTxItems.length){ el.innerHTML=`<div class="empty-state" style="padding:20px"><div class="empty-sub">กดเลือกอุปกรณ์</div></div>`; return; }
+  el.innerHTML = receiveTxItems.map((item,i)=>`
+    <div class="checkout-item">
+      <div class="tx-avatar">${item.img?`<img src="${escapeHtml(item.img)}" alt="">`:''}</div>
+      <div class="checkout-item-name">
+        <div style="font-weight:500;font-size:13px">${escapeHtml(item.name)}</div>
+        <div style="font-size:11px;color:var(--ig-muted)">${escapeHtml(item.code)} · ${escapeHtml(item.unit)}</div>
+      </div>
+      <div class="checkout-item-qty">
+        <button class="qty-btn" onclick="adjReceive(${i},-1)">−</button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="adjReceive(${i},1)">+</button>
+        <button class="qty-btn" onclick="rmReceive(${i})" style="color:var(--ig-red);border-color:var(--ig-red)">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function adjReceive(i,d){ receiveTxItems[i].qty=Math.max(1,(receiveTxItems[i].qty||1)+d); renderReceiveTxItems(); }
+function rmReceive(i){ receiveTxItems.splice(i,1); renderReceiveTxItems(); }
+
+async function submitReceive(){
+  const date = document.getElementById('receive-date').value;
+  const note = document.getElementById('receive-note').value.trim();
+  const editId = document.getElementById('receive-edit-id').value;
+  if(!date){ toast('กรุณาเลือกวันที่','error'); return; }
+  if(!receiveTxItems.length){ toast('กรุณาเลือกอุปกรณ์','error'); return; }
+  const btn = document.getElementById('submit-receive-btn');
+  btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...'; btn.disabled = true;
+
+  const itemsPayload = receiveTxItems.map(it=>{
+    const eq = equipments.find(e=>e.code===it.code);
+    return { material_id: eq?.id, quantity: it.qty };
+  });
+
+  try {
+    if(editId){
+      const docNum = document.getElementById('receive-doc-num').textContent;
+      const { error } = await sb.rpc('update_receiving_document', {
+        p_doc_id: editId, p_doc_number: docNum, p_date: date, p_note: note, p_items: itemsPayload
+      });
+      if(error) throw error;
+    } else {
+      const { data: docNum, error: numErr } = await sb.rpc('next_doc_number', { p_warehouse_id: currentWarehouse, p_prefix: 'RC' });
+      if(numErr) throw numErr;
+      document.getElementById('receive-doc-num').textContent = docNum;
+      const { error } = await sb.rpc('create_receiving_document', {
+        p_warehouse_id: currentWarehouse, p_doc_number: docNum, p_date: date, p_note: note, p_items: itemsPayload
+      });
+      if(error) throw error;
+    }
+    await loadAll();
+    toast('บันทึกการรับเข้าสำเร็จ ✓','success');
+  } catch(e){
+    toast(thaiError(e),'error');
+  }
+  closeModal('modal-create-receive');
+  btn.innerHTML = 'บันทึกการรับเข้า'; btn.disabled = false;
+}
+
+// ===== PRODUCT PICKER =====
+function openProductPicker(target){
+  pickerTarget = target; pickerSelected = {};
+  const src = target==='issue' ? issueTxItems : receiveTxItems;
+  src.forEach(it=>{ pickerSelected[it.code]=it.qty; });
+  document.getElementById('picker-search').value = '';
+  renderPicker(''); openModal('modal-product-picker');
+}
+
+function renderPicker(f){
+  const list = document.getElementById('picker-list');
+  const filtered = equipments.filter(e=>e.name.toLowerCase().includes(f.toLowerCase())||e.code.toLowerCase().includes(f.toLowerCase()));
+  if(!filtered.length){ list.innerHTML='<div class="empty-state" style="padding:20px"><div class="empty-sub">ไม่พบอุปกรณ์</div></div>'; return; }
+  list.innerHTML = filtered.map(eq=>{
+    const sel = pickerSelected[eq.code]||0;
+    const codeEsc = eq.code.replace(/'/g,"\\'");
+    return `<div class="product-card ${sel>0?'selected':''}" id="pcard-${escapeHtml(eq.code)}" onclick="togglePickerCard('${codeEsc}')">
+      <div class="product-card-img">${eq.img?`<img src="${escapeHtml(eq.img)}" alt="">`:'<span style="font-size:22px">📦</span>'}</div>
+      <div class="product-card-info">
+        <div class="product-card-name">${escapeHtml(eq.name)}</div>
+        <div class="product-card-code">${escapeHtml(eq.code)} · คงเหลือ: ${eq.qty} ${escapeHtml(eq.unit)}</div>
+      </div>
+      <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px">
+        <button class="qty-btn" onclick="adjPicker('${codeEsc}',-1)">−</button>
+        <input type="number" min="0" id="pinput-${escapeHtml(eq.code)}" value="${sel}"
+          style="width:48px;text-align:center;border:1.5px solid var(--ig-border);border-radius:6px;padding:3px 4px;font-size:14px;font-weight:500;font-family:inherit"
+          onclick="event.stopPropagation()" oninput="setPicker('${codeEsc}',this.value)" onblur="cleanPicker('${codeEsc}',this)">
+        <button class="qty-btn" onclick="adjPicker('${codeEsc}',1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _updatePickerCard(code){
+  const sel = pickerSelected[code]||0;
+  const card = document.getElementById('pcard-'+code);
+  const inp = document.getElementById('pinput-'+code);
+  if(card) card.className = 'product-card'+(sel>0?' selected':'');
+  if(inp && inp!==document.activeElement) inp.value = sel;
+}
+function togglePickerCard(c){ if(pickerSelected[c]) delete pickerSelected[c]; else pickerSelected[c]=1; _updatePickerCard(c); }
+function adjPicker(c,d){ const v=Math.max(0,(pickerSelected[c]||0)+d); if(v===0) delete pickerSelected[c]; else pickerSelected[c]=v; _updatePickerCard(c); }
+function setPicker(c,val){ const v=parseInt(val)||0; if(v<=0) delete pickerSelected[c]; else pickerSelected[c]=v; const card=document.getElementById('pcard-'+c); if(card) card.className='product-card'+(v>0?' selected':''); }
+function cleanPicker(c,inp){ const v=Math.max(0,parseInt(inp.value)||0); if(v===0) delete pickerSelected[c]; else pickerSelected[c]=v; inp.value=v; _updatePickerCard(c); }
+function filterPicker(v){ renderPicker(v); }
+function confirmPicker(){
+  const items = Object.entries(pickerSelected).filter(([,q])=>q>0).map(([c,q])=>{ const eq=equipments.find(e=>e.code===c); return eq?{code:eq.code,name:eq.name,qty:q,unit:eq.unit,img:eq.img||''}:null; }).filter(Boolean);
+  if(pickerTarget==='issue'){ issueTxItems=items; renderIssueTxItems(); }
+  else { receiveTxItems=items; renderReceiveTxItems(); }
+  closeModal('modal-product-picker');
+}
+
+// ===== DOC DETAIL =====
+function viewDoc(type, id){
+  const tx = type==='issue' ? issueTransactions.find(t=>t.id===id) : receiveTransactions.find(t=>t.id===id); if(!tx) return;
+  document.getElementById('doc-detail-title').textContent = type==='issue' ? `เบิก: ${tx.docNum}` : `รับเข้า: ${tx.docNum}`;
+  const total = (tx.items||[]).reduce((s,i)=>s+(i.qty||0),0);
+  document.getElementById('doc-detail-body').innerHTML = `
+    <table class="detail-table" style="margin-bottom:14px">
+      <tr><td style="color:var(--ig-muted);width:90px">เลขที่</td><td style="font-weight:600;color:var(--ig-blue)">${escapeHtml(tx.docNum)}</td></tr>
+      <tr><td style="color:var(--ig-muted)">วันที่</td><td>${fmtDate(tx.date)}</td></tr>
+      ${type==='issue'?`<tr><td style="color:var(--ig-muted)">ผู้เบิก</td><td>${escapeHtml(tx.requester)}</td></tr><tr><td style="color:var(--ig-muted)">หน่วยงาน</td><td>${escapeHtml(tx.dept||'-')}</td></tr>`:''}
+      <tr><td style="color:var(--ig-muted)">หมายเหตุ</td><td>${escapeHtml(tx.note||'-')}</td></tr>
+    </table>
+    <div style="font-size:12px;font-weight:600;color:var(--ig-muted);margin-bottom:10px">รายการ</div>
+    ${(tx.items||[]).map(it=>{ const eq=equipments.find(e=>e.code===it.code);
+      return `<div class="checkout-item">
+        <div class="tx-avatar">${eq?.img?`<img src="${escapeHtml(eq.img)}" alt="">`:type==='issue'?'📤':'📥'}</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:500">${escapeHtml(it.name)}</div><div style="font-size:11px;color:var(--ig-muted)">${escapeHtml(it.code)} · ${escapeHtml(it.unit)}</div></div>
+        <div class="tx-qty ${type==='issue'?'out':'in'}">${type==='issue'?'-':'+'}${it.qty}</div>
+      </div>`;
+    }).join('')}
+    <div style="padding-top:10px;text-align:right;font-size:13px;color:var(--ig-muted)">รวม: <strong style="font-size:16px;color:var(--ig-text)">${total}</strong> ชิ้น</div>`;
+  openModal('modal-doc-detail');
+}
+
+// ===== QR =====
+function openQR(target){ qrTarget=target; openModal('modal-qr'); startQR(); }
+async function startQR(){
+  try { qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}); document.getElementById('qr-video').srcObject=qrStream; }
+  catch(e){ toast('ไม่สามารถเปิดกล้องได้','error'); }
+}
+function closeQR(){ if(qrStream){ qrStream.getTracks().forEach(t=>t.stop()); qrStream=null; } closeModal('modal-qr'); }
+function manualQRInput(){
+  const val = document.getElementById('qr-manual-input').value.trim(); if(!val) return;
+  const eq = equipments.find(e=>e.code===val);
+  if(eq){
+    const t = qrTarget||'issue', items = t==='issue' ? issueTxItems : receiveTxItems;
+    if(!items.find(i=>i.code===eq.code)) items.push({code:eq.code,name:eq.name,qty:1,unit:eq.unit,img:eq.img||''});
+    if(t==='issue') renderIssueTxItems(); else renderReceiveTxItems();
+    toast(`เพิ่ม ${eq.name} แล้ว`,'success');
+  } else { toast('ไม่พบรหัสอุปกรณ์','error'); }
+  document.getElementById('qr-manual-input').value = ''; closeQR();
+}
+
+// ===== STOCK REPORT =====
+function renderStockReport(){ filterStock('all', document.querySelector('#page-stock .filter-chip')); }
+let stockFilterType = 'all';
+function filterStock(type, btn){
+  stockFilterType = type;
+  document.querySelectorAll('#page-stock .filter-chip').forEach(c=>c.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderStockList();
+}
+function renderStockList(){
+  const type = stockFilterType;
+  const q = (document.getElementById('stock-search')?.value || '').trim().toLowerCase();
+  let items = [...equipments];
+  if(q) items = items.filter(e => e.name.toLowerCase().includes(q) || e.code.toLowerCase().includes(q));
+  if(type==='desc') items.sort((a,b)=>b.qty-a.qty);
+  else if(type==='asc') items.sort((a,b)=>a.qty-b.qty);
+  else if(type==='low') items = items.filter(e=>e.qty>0 && e.qty<=e.minQty);
+  else if(type==='empty') items = items.filter(e=>e.qty===0);
+  const list = document.getElementById('stock-list');
+  if(!items.length){ list.innerHTML='<div class="empty-state"><div class="empty-text">ไม่พบรายการ</div></div>'; return; }
+  list.innerHTML = items.map(eq=>{
+    const isLow = eq.qty<=eq.minQty;
+    const pct = eq.minQty>0 ? Math.min(100,(eq.qty/(eq.minQty*3))*100) : Math.min(100,eq.qty);
+    return `<div class="stock-card">
+      <div class="stock-card-img">${eq.img?`<img src="${escapeHtml(eq.img)}" alt="">`:'<span style="font-size:24px">📦</span>'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+          <span style="font-weight:500;font-size:14px">${escapeHtml(eq.name)}</span>
+          ${eq.qty===0?'<span class="badge badge-danger" style="font-size:10px;background:#b91c1c;color:#fff">🚫 หมด</span>':isLow?'<span class="badge" style="font-size:10px;background:#fef3c7;color:#92400e">⚠️ ใกล้หมด</span>':''}
+        </div>
+        <div style="font-size:11px;color:var(--ig-muted);margin-bottom:5px">${escapeHtml(eq.code)}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${isLow?'var(--ig-red)':'var(--ig-green)'}"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span style="color:var(--ig-muted)">ขั้นต่ำ: ${eq.minQty} ${escapeHtml(eq.unit)}</span>
+          <span style="font-weight:700;font-size:14px;color:${isLow?'var(--ig-red)':'var(--ig-text)'}">${eq.qty} ${escapeHtml(eq.unit)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== REPORTS =====
+const MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+let issueReportMonth = new Date();
+let receiveReportMonth = new Date();
+
+function changeMonth(type,d){
+  if(type==='issue'){ issueReportMonth=new Date(issueReportMonth.getFullYear(),issueReportMonth.getMonth()+d,1); renderIssueReport(); }
+  else { receiveReportMonth=new Date(receiveReportMonth.getFullYear(),receiveReportMonth.getMonth()+d,1); renderReceiveReport(); }
+}
+
+function renderIssueReport(){
+  const m = issueReportMonth;
+  document.getElementById('issue-report-month').textContent = `${MONTHS[m.getMonth()]} ${m.getFullYear()+543}`;
+  const filtered = issueTransactions.filter(tx=>{ const d=new Date(tx.date); return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear(); });
+  document.getElementById('ir-times').textContent = filtered.length;
+  document.getElementById('ir-items').textContent = filtered.reduce((s,tx)=>s+(tx.items?.length||0),0);
+  document.getElementById('ir-units').textContent = filtered.reduce((s,tx)=>s+(tx.items||[]).reduce((a,i)=>a+(i.qty||0),0),0);
+  const days = new Date(m.getFullYear(),m.getMonth()+1,0).getDate();
+  const labels = Array.from({length:days},(_,i)=>i+1);
+  const data = labels.map(d=>filtered.filter(tx=>new Date(tx.date).getDate()===d).reduce((s,tx)=>s+(tx.items||[]).reduce((a,i)=>a+(i.qty||0),0),0));
+  renderChart('issue-chart',labels,data,'จำนวนเบิก','#ed4956',(c)=>issueChart=c,issueChart);
+  document.getElementById('issue-report-list').innerHTML = !filtered.length
+    ? '<div class="empty-state" style="padding:30px"><div class="empty-text">ไม่มีรายการในเดือนนี้</div></div>'
+    : filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>`
+      <div class="tx-item">
+        <div class="tx-avatar" style="font-size:16px">📤</div>
+        <div class="tx-info">
+          <div class="tx-name">${escapeHtml(tx.requester||'-')} <span style="color:var(--ig-muted);font-size:11px">${escapeHtml(tx.dept||'')}</span></div>
+          <div class="tx-sub">${escapeHtml(tx.docNum)} · ${fmtDate(tx.date)}</div>
+          <div class="tx-sub">${(tx.items||[]).map(i=>`${escapeHtml(i.name)} ×${i.qty}`).join(', ')}</div>
+        </div>
+        <div class="tx-amount"><div class="tx-qty out">-${(tx.items||[]).reduce((s,i)=>s+(i.qty||0),0)}</div><div class="tx-date">ชิ้น</div></div>
+      </div>`).join('');
+}
+
+function renderReceiveReport(){
+  const m = receiveReportMonth;
+  document.getElementById('receive-report-month').textContent = `${MONTHS[m.getMonth()]} ${m.getFullYear()+543}`;
+  const filtered = receiveTransactions.filter(tx=>{ const d=new Date(tx.date); return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear(); });
+  document.getElementById('rr-times').textContent = filtered.length;
+  document.getElementById('rr-items').textContent = filtered.reduce((s,tx)=>s+(tx.items?.length||0),0);
+  document.getElementById('rr-units').textContent = filtered.reduce((s,tx)=>s+(tx.items||[]).reduce((a,i)=>a+(i.qty||0),0),0);
+  const days = new Date(m.getFullYear(),m.getMonth()+1,0).getDate();
+  const labels = Array.from({length:days},(_,i)=>i+1);
+  const data = labels.map(d=>filtered.filter(tx=>new Date(tx.date).getDate()===d).reduce((s,tx)=>s+(tx.items||[]).reduce((a,i)=>a+(i.qty||0),0),0));
+  renderChart('receive-chart',labels,data,'จำนวนรับเข้า','#58c322',(c)=>receiveChart=c,receiveChart);
+  document.getElementById('receive-report-list').innerHTML = !filtered.length
+    ? '<div class="empty-state" style="padding:30px"><div class="empty-text">ไม่มีรายการในเดือนนี้</div></div>'
+    : filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>`
+      <div class="tx-item">
+        <div class="tx-avatar" style="font-size:16px">📥</div>
+        <div class="tx-info">
+          <div class="tx-name">${escapeHtml(tx.docNum)}</div>
+          <div class="tx-sub">${fmtDate(tx.date)}${tx.note?' · '+escapeHtml(tx.note):''}</div>
+          <div class="tx-sub">${(tx.items||[]).map(i=>`${escapeHtml(i.name)} ×${i.qty}`).join(', ')}</div>
+        </div>
+        <div class="tx-amount"><div class="tx-qty in">+${(tx.items||[]).reduce((s,i)=>s+(i.qty||0),0)}</div><div class="tx-date">ชิ้น</div></div>
+      </div>`).join('');
+}
+
+function renderChart(id,labels,data,label,color,setter,prev){
+  const c = document.getElementById(id); if(!c) return;
+  if(prev) prev.destroy();
+  setter(new Chart(c,{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:color+'66',borderColor:color,borderWidth:1.5,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#f5f5f5'},ticks:{font:{size:10},stepSize:1}}}}}));
+}
+
+// ===== EXPORT =====
+function exportStock(){
+  const rows = [['หน่วยงาน','รหัส','ชื่ออุปกรณ์','หน่วยนับ','คงเหลือ','ขั้นต่ำ','สถานะ']];
+  equipments.forEach(eq=>rows.push([currentWarehouseCode||currentWarehouse,eq.code,eq.name,eq.unit,eq.qty,eq.minQty,eq.qty===0?'หมด':eq.qty<=eq.minQty?'ใกล้หมด':'ปกติ']));
+  dlAuto(rows,'สต๊อกคงเหลือ',`stock_${currentWarehouseCode||currentWarehouse}_report`);
+}
+function exportIssueReport(){
+  const m = issueReportMonth;
+  const filtered = issueTransactions.filter(tx=>{ const d=new Date(tx.date); return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear(); });
+  const rows = [['หน่วยงาน','เลขที่เอกสาร','วันที่','ผู้เบิก','หน่วยงานผู้เบิก','รหัส','ชื่ออุปกรณ์','จำนวน','หน่วยนับ','หมายเหตุ']];
+  filtered.forEach(tx=>(tx.items||[]).forEach(it=>rows.push([currentWarehouseCode||currentWarehouse,tx.docNum,tx.date,tx.requester,tx.dept||'',it.code,it.name,it.qty,it.unit,tx.note||''])));
+  dlAuto(rows,'รายงานเบิก-จ่าย',`issue_${currentWarehouseCode||currentWarehouse}_${m.getFullYear()}${String(m.getMonth()+1).padStart(2,'0')}`);
+}
+function exportReceiveReport(){
+  const m = receiveReportMonth;
+  const filtered = receiveTransactions.filter(tx=>{ const d=new Date(tx.date); return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear(); });
+  const rows = [['หน่วยงาน','เลขที่เอกสาร','วันที่','รหัส','ชื่ออุปกรณ์','จำนวน','หน่วยนับ','หมายเหตุ']];
+  filtered.forEach(tx=>(tx.items||[]).forEach(it=>rows.push([currentWarehouseCode||currentWarehouse,tx.docNum,tx.date,it.code,it.name,it.qty,it.unit,tx.note||''])));
+  dlAuto(rows,'รายงานรับเข้า',`receive_${currentWarehouseCode||currentWarehouse}_${m.getFullYear()}${String(m.getMonth()+1).padStart(2,'0')}`);
+}
+function populateReportYears(){
+  const sel = document.getElementById('report-year-picker');
+  if(!sel) return;
+  const curYear = new Date().getFullYear();
+  // clear and rebuild
+  sel.innerHTML = '<option value="">ทุกปี</option>';
+  const years = new Set([curYear]);
+  for(let y = curYear-1; y >= curYear-5; y--) years.add(y);
+  [...issueTransactions,...receiveTransactions].forEach(tx=>{ if(tx.date) years.add(new Date(tx.date).getFullYear()); });
+  [...years].sort((a,b)=>b-a).forEach(y=>{
+    const o = document.createElement('option'); o.value=y; o.textContent=y+' ('+(y+543)+')'; sel.appendChild(o);
+  });
+  // ตั้งค่าเริ่มต้นเป็นปีปัจจุบัน
+  sel.value = curYear;
+}
+
+function exportAllReports(){
+  closeModal('modal-reports-tab');
+  const selYear = document.getElementById('report-year-picker')?.value;
+  const selMonth = document.getElementById('report-month-picker2')?.value;
+  const filterByDate = (tx) => {
+    if(!selYear && !selMonth) return true;
+    const d = new Date(tx.date);
+    if(selYear && d.getFullYear() !== Number(selYear)) return false;
+    if(selMonth && d.getMonth()+1 !== Number(selMonth)) return false;
+    return true;
+  };
+  let suffix = '';
+  if(selYear) suffix += `_${selYear}`;
+  if(selMonth) suffix += `_เดือน${selMonth.padStart(2,'0')}`;
+  if(!suffix) suffix = '_ทั้งหมด';
+
+  // Sheet 1: รายงานอุปกรณ์สำนักงาน
+  const equipRows = [['หน่วยงาน','รหัส','ชื่ออุปกรณ์','หน่วยนับ','คงเหลือ','ขั้นต่ำ','สถานะ']];
+  [...equipments].sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true}))
+    .forEach(eq=>equipRows.push([currentWarehouseCode||currentWarehouse,eq.code,eq.name,eq.unit,eq.qty,eq.minQty,
+      eq.qty===0?'หมด':eq.qty<=eq.minQty?'ใกล้หมด':'ปกติ']));
+
+  // Sheet 2: สต๊อกคงเหลือ
+  const stockRows = equipRows;
+
+  // Sheet 3: รายงานเบิก-จ่าย
+  const issueRows = [['หน่วยงาน','เลขที่เอกสาร','วันที่','ผู้เบิก','หน่วยงานผู้เบิก','รหัส','ชื่ออุปกรณ์','จำนวน','หน่วยนับ','หมายเหตุ']];
+  issueTransactions.filter(filterByDate).forEach(tx=>(tx.items||[]).forEach(it=>
+    issueRows.push([currentWarehouseCode||currentWarehouse,tx.docNum,tx.date,tx.requester,tx.dept||'',it.code,it.name,it.qty,it.unit,tx.note||''])));
+
+  // Sheet 4: รายงานรับเข้า
+  const recRows = [['หน่วยงาน','เลขที่เอกสาร','วันที่','รหัส','ชื่ออุปกรณ์','จำนวน','หน่วยนับ','หมายเหตุ']];
+  receiveTransactions.filter(filterByDate).forEach(tx=>(tx.items||[]).forEach(it=>
+    recRows.push([currentWarehouseCode||currentWarehouse,tx.docNum,tx.date,it.code,it.name,it.qty,it.unit,tx.note||''])));
+
+  const fn = `รายงานทั้งหมด_${currentWarehouseCode||currentWarehouse}${suffix}`;
+  if(typeof XLSX !== 'undefined'){
+    try{
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(equipRows), 'รายงานอุปกรณ์สำนักงาน');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(stockRows), 'สต๊อกคงเหลือ');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(issueRows), 'รายงานเบิก-จ่าย');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(recRows), 'รายงานรับเข้า');
+      XLSX.writeFile(wb, fn+'.xlsx');
+      toast('ดาวน์โหลดรายงานทั้งหมด ✓','success'); return;
+    }catch(e){}
+  }
+  dlAuto(issueRows,'รายงานเบิก-จ่าย',`issue_${currentWarehouseCode||currentWarehouse}${suffix}`);
+  toast('XLSX ไม่พร้อม ดาวน์โหลดแยกไฟล์แทน','error');
+}
+
+function dlAuto(rows, sheetName, fnBase){
+  if(typeof XLSX !== 'undefined'){
+    try{
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      XLSX.writeFile(wb, fnBase+'.xlsx');
+      toast('ดาวน์โหลด Excel แล้ว ✓','success'); return;
+    }catch(e){}
+  }
+  // fallback CSV
+  const bom='\uFEFF';
+  const csv=bom+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=fnBase+'.csv'; a.click();
+  toast('ดาวน์โหลด CSV แล้ว ✓','success');
+}
+function dlXLSX(rows, sheetName, fn){
+  dlAuto(rows, sheetName, fn.replace(/\.xlsx$/,''));
+}
+
+// ===== LOW STOCK =====
+function checkLowStock(){
+  const low = equipments.filter(e=>e.qty<=e.minQty);
+  const b = document.getElementById('alert-badge');
+  b.style.display = low.length ? 'flex' : 'none';
+  if(low.length) b.textContent = low.length;
+}
+function showLowStockAlert(){
+  const low = equipments.filter(e=>e.qty<=e.minQty);
+  const empty2 = equipments.filter(e=>e.qty===0);
+if(!low.length && !empty2.length){ toast('ไม่มีอุปกรณ์ใกล้หมด 🎉','success'); return; }
+  const emptyList = equipments.filter(e=>e.qty===0);
+let msg='';
+if(emptyList.length) msg+=`🚫 หมดแล้ว ${emptyList.length} รายการ:\n`+emptyList.map(e=>`• ${e.name}`).join('\n')+'\n\n';
+if(low.filter(e=>e.qty>0).length) msg+=`⚠️ ใกล้หมด ${low.filter(e=>e.qty>0).length} รายการ:\n`+low.filter(e=>e.qty>0).map(e=>`• ${e.name}: ${e.qty} ${e.unit} (ขั้นต่ำ ${e.minQty})`).join('\n');
+alert(msg.trim());
+}
+
+// ===== NAV =====
+function openReportTab(btn){
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item-issue').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  populateReportYears();
+  openModal('modal-reports-tab');
+}
+function navigateIssue(btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item-issue').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-issue').classList.add('active');
+  btn.classList.add('active'); window.scrollTo(0,0);
+}
+
+function navigate(tab,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item-issue').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`page-${tab}`).classList.add('active');
+  btn.classList.add('active'); window.scrollTo(0,0);
+}
+function renderEquipReport(){
+  const q = (document.getElementById('equip-report-search')?.value||'').toLowerCase().trim();
+  const filtered = equipments
+    .filter(e => !q || e.name.toLowerCase().includes(q) || e.code.toLowerCase().includes(q))
+    .sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true}));
+  const emptyC = equipments.filter(e=>e.qty===0).length;
+  const lowC = equipments.filter(e=>e.qty>0&&e.qty<=e.minQty).length;
+  document.getElementById('er-total').textContent = equipments.length;
+  document.getElementById('er-empty').textContent = emptyC;
+  document.getElementById('er-low').textContent = lowC;
+  document.getElementById('er-ok').textContent = equipments.length - emptyC - lowC;
+  const tbody = document.getElementById('equip-report-body');
+  if(!tbody) return;
+  tbody.innerHTML = filtered.map((eq,i)=>{
+    const isEmpty = eq.qty===0;
+    const isLow = !isEmpty && eq.qty<=eq.minQty;
+    const badge = isEmpty
+      ? `<span style="background:#b91c1c;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">🚫 หมด</span>`
+      : isLow
+      ? `<span style="background:#facc15;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">⚠️ ใกล้หมด</span>`
+      : `<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">✓ ปกติ</span>`;
+    const qtyColor = isEmpty ? '#b91c1c' : isLow ? '#d97706' : 'var(--ig-text)';
+    const bg = i%2===0 ? '' : 'background:#fafafa';
+    return `<tr style="border-bottom:1px solid var(--ig-border);${bg}">
+      <td style="padding:10px 12px;color:var(--ig-muted);font-size:12px">${escapeHtml(eq.code)}</td>
+      <td style="padding:10px 12px;font-weight:500">${escapeHtml(eq.name)}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--ig-muted)">${escapeHtml(eq.unit)}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:700;color:${qtyColor}">${eq.qty}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--ig-muted)">${eq.minQty}</td>
+      <td style="padding:10px 12px;text-align:center">${badge}</td>
+    </tr>`;
+  }).join('');
+}
+function exportEquipReport(){
+  const rows = [['หน่วยงาน','รหัส','ชื่ออุปกรณ์','หน่วยนับ','คงเหลือ','ขั้นต่ำ','สถานะ']];
+  [...equipments]
+    .sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true}))
+    .forEach(eq=>rows.push([currentWarehouseCode||currentWarehouse,eq.code,eq.name,eq.unit,eq.qty,eq.minQty,
+      eq.qty===0?'หมด':eq.qty<=eq.minQty?'ใกล้หมด':'ปกติ']));
+  dlAuto(rows,'รายงานอุปกรณ์สำนักงาน',`equip_${currentWarehouseCode||currentWarehouse}_${today()}`);
+}
+
+function goReport(tab){
+  closeModal('modal-reports-tab');
+  setTimeout(()=>{
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.nav-item-issue').forEach(b=>b.classList.remove('active'));
+    const page = document.getElementById(`page-${tab}`);
+    if(page){ page.classList.add('active'); window.scrollTo(0,0); }
+    document.getElementById('nav-report-btn').classList.add('active');
+    if(tab==='equip-report') renderEquipReport();
+  }, 50);
+}
+
+// ===== MODAL =====
+function openModal(id){ document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{ if(e.target===m){ m.classList.add('hidden'); if(m.id==='modal-qr') closeQR(); } });
+});
+
+// ===== TOAST =====
+function toast(msg,type=''){
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className=`toast ${type}`; t.textContent=msg;
+  c.appendChild(t); setTimeout(()=>t.remove(),2800);
+}
+
+// ===== HELPERS =====
+function today(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+function showSkeleton(){
+  const grid = document.getElementById('product-grid');
+  const empty = document.getElementById('equipment-empty');
+  if(!grid) return;
+  if(empty) empty.style.display='none';
+  grid.style.display='grid';
+  grid.style.gridTemplateColumns='repeat(5,1fr)';
+  grid.innerHTML = Array.from({length:10}).map(()=>
+    `<div class="skeleton" style="aspect-ratio:1;border-radius:6px"></div>`
+  ).join('');
+}
+function genNum(prefix){
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const dd = String(now.getDate()).padStart(2,'0');
+  const src = prefix==='IS' ? issueTransactions : receiveTransactions;
+  const key = `${prefix}-${yy}${mm}${dd}`;
+  const cnt = src.filter(r=>r.docNum.startsWith(key)).length;
+  return `${key}-${String(cnt+1).padStart(3,'0')}`;
+}
+function fmtDate(s){
+  if(!s) return '-';
+  const d = new Date(s+'T00:00:00');
+  return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()+543}`;
+}
+
+// ===== START =====
+function init(){
+  // ตั้งค่าเริ่มต้นให้แน่ใจว่าหน้าจอสะอาดตอนโหลดครั้งแรก (กันเคส element ค้างสถานะจาก reload)
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-screen').style.display='';
+  document.getElementById('warehouse-screen').classList.add('hidden');
+  document.getElementById('warehouse-screen').style.display='none';
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));
+  document.getElementById('topbar-dept-badge').style.display='none';
+  setConn(false);
+  // กด Enter ในช่องรหัสผ่านแล้วให้ล็อกอินได้เลย
+  const passInput = document.getElementById('login-pass');
+  if(passInput) passInput.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+}
+init();
+</script>
+</body>
+</html>
