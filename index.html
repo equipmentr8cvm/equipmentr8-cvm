@@ -228,8 +228,6 @@ body{font-family:'Kanit','Sarabun',sans-serif;background:#fafafa;color:var(--ig-
       <div id="admin-panel-warehouses">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           <select class="form-control" id="new-wh-company" style="flex:1;min-width:120px">
-            <option value="pom">POM</option>
-            <option value="num">NUM</option>
             <option value="cvm">CVM</option>
           </select>
           <input type="text" class="form-control" id="new-wh-code" placeholder="รหัสคลัง" style="flex:1;min-width:100px">
@@ -734,10 +732,8 @@ function hideLoginScreen(){
   loginScr.classList.add('hidden');
 }
 
-// บริษัทคงที่ ไม่ต้องดึงจาก DB
+// บริษัทคงที่ ไม่ต้องดึงจาก DB (เหลือแค่ CVM)
 const FIXED_COMPANIES = [
-  {id:'pom', code:'POM', name:'บริษัท POM'},
-  {id:'num', code:'NUM', name:'บริษัท NUM'},
   {id:'cvm', code:'CVM', name:'บริษัท CVM'},
 ];
 
@@ -745,21 +741,19 @@ async function loadCompaniesAndWarehouses(){
   allCompanies = FIXED_COMPANIES;
   const {data:wh} = await sb.from('warehouses').select('*').order('code');
   // map company_id (stored as 'pom'/'num'/'cvm') to company object
-  allWarehouses = (wh||[]).map(w=>({
-    ...w,
-    companies: FIXED_COMPANIES.find(c=>c.id===w.company_id) || {name:'ไม่ระบุ'}
-  }));
+  // เหลือใช้งานเฉพาะคลังของบริษัท CVM เท่านั้น
+  allWarehouses = (wh||[])
+    .filter(w=>(w.company_id||'').toLowerCase()==='cvm')
+    .map(w=>({
+      ...w,
+      companies: FIXED_COMPANIES.find(c=>c.id===w.company_id) || {name:'ไม่ระบุ'}
+    }));
 }
 
 function showWarehouseSelector(list){
   const whs = list || allWarehouses;
-  if(currentUser?.role === 'superuser'){
-    // SuperUser: เลือกบริษัทก่อน
-    showCompanySelector(whs);
-  } else {
-    // User ทั่วไป: แสดงคลังที่มีสิทธิ์เลย
-    showWarehouseList(whs);
-  }
+  // ตัดหน้าเลือกบริษัทออก (เหลือบริษัทเดียวคือ CVM) แสดงรายการคลังที่มีสิทธิ์ตรงเลย
+  showWarehouseList(whs);
 }
 
 function showCompanySelector(whs){
@@ -802,19 +796,18 @@ function selectCompanyGroup(cid){
 function showWarehouseList(whs){
   const isSuperUser = currentUser?.role === 'superuser';
   document.getElementById('wh-admin-corner-btn').style.display = isSuperUser ? 'inline-flex' : 'none';
-  const backBtn = isSuperUser
-    ? `<button onclick="showCompanySelector(allWarehouses)" style="background:none;border:none;color:#7c3aed;font-size:13px;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;gap:4px;padding:0">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> กลับเลือกบริษัท
-      </button>` : '';
-  const companyName = whs[0]?.companies?.name || whs[0]?.company_id?.toUpperCase() || '';
-  document.getElementById('wh-screen-subtitle').textContent = companyName ? `${companyName} — เลือกคลัง` : 'เลือกคลัง';
+  document.getElementById('wh-screen-subtitle').textContent = 'เลือกคลังที่ต้องการ';
   window._whListCurrent = whs; // เก็บ list ไว้อ้างอิงด้วย index แทนการฝัง JSON ใน attribute
-  document.getElementById('wh-cards-container').innerHTML = backBtn + whs.map((w,idx)=>
-    `<div class="warehouse-card" style="margin-bottom:8px" onclick="selectWarehouseByIndex(${idx})">
-      <div class="warehouse-card-icon" style="background:#f5f3ff">&#x1f3ed;</div>
-      <div class="warehouse-card-info"><div class="warehouse-card-name" style="color:#7c3aed">${escapeHtml(w.name)}</div><div class="warehouse-card-desc">${escapeHtml(w.code)}</div></div>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>`).join('');
+  if(!whs.length){
+    document.getElementById('wh-cards-container').innerHTML = `<div style="text-align:center;color:var(--ig-muted);font-size:13px;padding:24px 0">ไม่มีคลังที่ได้รับสิทธิ์เข้าถึง</div>`;
+  } else {
+    document.getElementById('wh-cards-container').innerHTML = whs.map((w,idx)=>
+      `<div class="warehouse-card" style="margin-bottom:8px" onclick="selectWarehouseByIndex(${idx})">
+        <div class="warehouse-card-icon" style="background:#f5f3ff">&#x1f3ed;</div>
+        <div class="warehouse-card-info"><div class="warehouse-card-name" style="color:#7c3aed">${escapeHtml(w.name)}</div><div class="warehouse-card-desc">${escapeHtml(w.code)}</div></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`).join('');
+  }
   const ws2=document.getElementById('warehouse-screen');
   ws2.classList.remove('hidden'); ws2.style.display='';
 }
@@ -875,12 +868,12 @@ function switchWarehouse(){
   const s=document.getElementById('equip-search'); if(s) s.value='';
   document.getElementById('topbar-dept-badge').style.display='none';
   document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));
-  // แสดงหน้าเลือกบริษัท
+  // แสดงรายการคลังที่มีสิทธิ์ตรงเลย (ตัดหน้าเลือกบริษัทออก)
   if(allWarehouses.length > 0){
-    showCompanySelector(allWarehouses);
+    showWarehouseList(allWarehouses);
   } else {
     // โหลดคลังใหม่ก่อน
-    loadCompaniesAndWarehouses().then(()=>showCompanySelector(allWarehouses));
+    loadCompaniesAndWarehouses().then(()=>showWarehouseList(allWarehouses));
   }
 }
 
