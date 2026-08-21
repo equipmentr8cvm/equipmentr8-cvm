@@ -687,7 +687,9 @@ async function doLogin(){
     if(!data||!data.length){ err.textContent='ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'; err.style.display='block'; return; }
     currentUser = data[0];
     const unameEl = document.getElementById('topbar-username');
-    document.getElementById('topbar-username-text').textContent = currentUser.display_name || currentUser.username || '';
+    const dispName = currentUser.display_name || currentUser.username || '';
+    const rawUsername = currentUser.username || '';
+    document.getElementById('topbar-username-text').textContent = (dispName && rawUsername && dispName!==rawUsername) ? `${dispName} (${rawUsername})` : (dispName || rawUsername);
     unameEl.style.display = 'inline-flex';
     // สำคัญ: ห้ามซ่อนหน้า login จนกว่าจะมั่นใจว่าจะไปหน้าเลือกคลัง/เข้าคลังได้สำเร็จแน่นอน
     // (เดิมซ่อนหน้า login ทันทีตรงนี้ ทำให้ถ้า error เกิดขึ้นระหว่างขั้นตอนถัดไป
